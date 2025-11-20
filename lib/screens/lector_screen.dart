@@ -51,6 +51,9 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   double _chapterProgress = 0.0;
   final Map<int, double> _chaptersProgressMap = {};
   bool _canPop = false;
+  
+  // Estado temporal para selección manual de contexto
+  Map<String, dynamic>? _pendingAnkiData;
 
   @override
   void initState() {
@@ -649,15 +652,32 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           }
                         }
                       },
-                      onSaveToAnki: () {
+                      onSaveToAnki: () async {
                         if (_currentSelection.isEmpty) {
                           PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
                           return;
                         }
 
-                        final sentenceContext = _extractSentence(_currentSelection, chapters[index].plainText);
+                        String initialContext;
+                        String initialWord = _currentSelection;
+                        String initialDefinition = '';
+                        String initialExample = '';
 
-                        showModalBottomSheet(
+                        if (_pendingAnkiData != null) {
+                          // Modo selección manual: la selección actual ES el contexto
+                          initialContext = _currentSelection;
+                          // Restaurar datos previos
+                          initialWord = _pendingAnkiData!['word'] ?? '';
+                          initialDefinition = _pendingAnkiData!['definition'] ?? '';
+                          initialExample = _pendingAnkiData!['example'] ?? '';
+                          // Limpiar estado pendiente
+                          setState(() => _pendingAnkiData = null);
+                        } else {
+                          // Modo normal: extracción automática
+                          initialContext = _extractSentence(_currentSelection, chapters[index].plainText);
+                        }
+
+                        final result = await showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: const Color(0xFF1E1E1E),
@@ -665,13 +685,23 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
                           builder: (context) => AnkiEditModal(
-                            word: _currentSelection,
+                            word: initialWord,
                             bookId: widget.book.id,
                             bookTitle: widget.book.title,
-                            context: sentenceContext.isNotEmpty ? sentenceContext : chapters[index].plainText,
+                            context: initialContext.isNotEmpty ? initialContext : chapters[index].plainText,
+                            initialDefinition: initialDefinition,
+                            initialExample: initialExample,
                           ),
                         );
+
+                        // Manejar solicitud de contexto manual
+                        if (result != null && result is Map && result['action'] == 'manual_context') {
+                          setState(() {
+                            _pendingAnkiData = result['formData'];
+                          });
+                        }
                       },
+                      isSelectingContext: _pendingAnkiData != null,
                     );
                   },
                 );
@@ -758,6 +788,69 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
               ),
             ),
           ),
+          
+          // Panel de Selección de Contexto Manual
+          if (_pendingAnkiData != null)
+            Positioned(
+              bottom: 24,
+              left: 24,
+              right: 24,
+              child: Card(
+                elevation: 8,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.format_quote_rounded, 
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Seleccionando contexto',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Selecciona el texto y pulsa "Confirmar Contexto"',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () {
+                          setState(() => _pendingAnkiData = null);
+                        },
+                        tooltip: 'Cancelar',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     ),
@@ -776,6 +869,7 @@ class _ChapterView extends StatefulWidget {
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
   final VoidCallback onSaveToAnki;
+  final bool isSelectingContext;
 
   const _ChapterView({
     required this.chapter,
@@ -788,6 +882,7 @@ class _ChapterView extends StatefulWidget {
     required this.onSelectionChanged,
     required this.onProgressChanged,
     required this.onSaveToAnki,
+    this.isSelectingContext = false,
   });
 
   @override
@@ -915,7 +1010,7 @@ class _ChapterViewState extends State<_ChapterView> {
               editableTextState.hideToolbar();
               widget.onSaveToAnki();
             },
-            label: 'Guardar en Anki',
+            label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar en Anki',
           ),
         );
 

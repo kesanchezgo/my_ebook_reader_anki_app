@@ -11,6 +11,8 @@ class AnkiEditModal extends StatefulWidget {
   final String context;
   final String bookTitle;
   final String bookId;
+  final String? initialDefinition;
+  final String? initialExample;
 
   const AnkiEditModal({
     super.key,
@@ -18,6 +20,8 @@ class AnkiEditModal extends StatefulWidget {
     required this.context,
     required this.bookTitle,
     required this.bookId,
+    this.initialDefinition,
+    this.initialExample,
   });
 
   @override
@@ -46,17 +50,30 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
     super.initState();
     _wordController = TextEditingController(text: widget.word);
     _contextController = TextEditingController(text: widget.context);
-    _definitionController = TextEditingController();
-    _exampleController = TextEditingController();
+    _definitionController = TextEditingController(text: widget.initialDefinition ?? '');
+    _exampleController = TextEditingController(text: widget.initialExample ?? '');
     
     // Listeners para validación
     _wordController.addListener(_validateForm);
     _contextController.addListener(_validateForm);
     _definitionController.addListener(_validateForm);
     
-    _searchDictionary();
+    if (widget.initialDefinition == null || widget.initialDefinition!.isEmpty) {
+      _searchDictionary();
+    }
     _checkDuplicate();
     _validateForm(); // Validación inicial
+  }
+
+  void _requestManualContext() {
+    Navigator.pop(context, {
+      'action': 'manual_context',
+      'formData': {
+        'word': _wordController.text,
+        'definition': _definitionController.text,
+        'example': _exampleController.text,
+      }
+    });
   }
 
   void _validateForm() {
@@ -300,7 +317,22 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
                 theme: theme,
                 maxLines: 2,
               ),
-              const SizedBox(height: 32),
+              
+              // Manual Context Button
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _requestManualContext,
+                  icon: const Icon(Icons.touch_app_rounded, size: 18),
+                  label: const Text('Seleccionar del libro'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
               
               // Action Button
               SizedBox(
