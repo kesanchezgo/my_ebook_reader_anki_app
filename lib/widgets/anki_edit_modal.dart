@@ -38,6 +38,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
   bool _isSearching = false;
   bool _cardExists = false;
   bool _isFormValid = false;
+  String? _definitionSource;
 
   @override
   void initState() {
@@ -67,17 +68,21 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
   }
 
   Future<void> _searchDictionary() async {
-    setState(() => _isSearching = true);
+    setState(() {
+      _isSearching = true;
+      _definitionSource = null;
+    });
     
     try {
-      final definition = await _dictionaryService.getDefinition(widget.word);
+      final result = await _dictionaryService.getDefinition(widget.word);
       
       if (mounted) {
         setState(() {
           _isSearching = false;
           // Si la definición es válida y no es el mensaje de error por defecto
-          if (definition.isNotEmpty && definition != 'Definición no encontrada') {
-            _definitionController.text = definition;
+          if (result.definition.isNotEmpty && !result.definition.contains('no encontrada')) {
+            _definitionController.text = result.definition;
+            _definitionSource = result.source;
             // No mostramos toast si se encuentra, para una experiencia más limpia
           } else {
             // No rellenamos el campo con texto de error, lo dejamos vacío para que el usuario escriba
@@ -238,6 +243,25 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
             ),
             const SizedBox(height: 16),
             
+            // Definition Source Chip
+            if (_definitionSource != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8, left: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Fuente: $_definitionSource',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Definition Input
             _buildModernTextField(
               controller: _definitionController,

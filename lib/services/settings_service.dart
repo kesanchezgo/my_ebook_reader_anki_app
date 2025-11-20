@@ -18,24 +18,32 @@ class SettingsService {
   static const String _keyFontSize = 'font_size';
   static const String _keyThemeId = 'theme_id';
   static const String _keyTextAlign = 'text_align';
+  static const String _keyGeminiApiKey = 'gemini_api_key';
+  static const String _keyDictionaryPriority = 'dictionary_priority';
 
   // Defaults
   static const String _defaultFontFamily = 'Merriweather';
   static const double _defaultFontSize = 18.0;
   static const String _defaultThemeId = AppTheme.darkPremium;
   static const String _defaultTextAlign = 'justify';
+  static const String _defaultGeminiApiKey = '';
+  static const List<String> _defaultDictionaryPriority = ['gemini', 'local', 'web'];
 
   // Current State
   String _fontFamily = _defaultFontFamily;
   double _fontSize = _defaultFontSize;
   String _themeId = _defaultThemeId;
   String _textAlign = _defaultTextAlign;
+  String _geminiApiKey = _defaultGeminiApiKey;
+  List<String> _dictionaryPriority = _defaultDictionaryPriority;
 
   // Getters
   String get fontFamily => _fontFamily;
   double get fontSize => _fontSize;
   String get themeId => _themeId;
   String get textAlign => _textAlign;
+  String get geminiApiKey => _geminiApiKey;
+  List<String> get dictionaryPriority => _dictionaryPriority;
 
   // Themes Definition (Delegated to AppTheme)
   Map<String, AppTheme> get appThemes => AppTheme.themes;
@@ -61,6 +69,8 @@ class SettingsService {
     _fontSize = _prefs!.getDouble(_keyFontSize) ?? _defaultFontSize;
     _themeId = _prefs!.getString(_keyThemeId) ?? _defaultThemeId;
     _textAlign = _prefs!.getString(_keyTextAlign) ?? _defaultTextAlign;
+    _geminiApiKey = _prefs!.getString(_keyGeminiApiKey) ?? _defaultGeminiApiKey;
+    _dictionaryPriority = _prefs!.getStringList(_keyDictionaryPriority) ?? _defaultDictionaryPriority;
     
     // Update notifier
     themeNotifier.value = _themeId;
@@ -97,11 +107,27 @@ class SettingsService {
     await _prefs!.setString(_keyTextAlign, value);
   }
 
+  /// Guarda la API Key de Gemini
+  Future<void> setGeminiApiKey(String value) async {
+    _geminiApiKey = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_keyGeminiApiKey, value);
+  }
+
+  /// Guarda la prioridad de diccionarios
+  Future<void> setDictionaryPriority(List<String> value) async {
+    _dictionaryPriority = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setStringList(_keyDictionaryPriority, value);
+  }
+
   /// Restaura los valores por defecto
   Future<void> resetToDefaults() async {
     await setFontFamily(_defaultFontFamily);
     await setFontSize(_defaultFontSize);
     await setThemeId(_defaultThemeId);
     await setTextAlign(_defaultTextAlign);
+    await setGeminiApiKey(_defaultGeminiApiKey);
+    await setDictionaryPriority(_defaultDictionaryPriority);
   }
 }

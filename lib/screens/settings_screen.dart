@@ -56,6 +56,12 @@ class SettingsScreen extends StatelessWidget {
           ),
           
           const SizedBox(height: 32),
+
+          _buildSectionHeader(context, 'Diccionario Inteligente'),
+          const SizedBox(height: 16),
+          _buildDictionarySection(context),
+          
+          const SizedBox(height: 32),
           
           _buildSectionHeader(context, 'Información'),
           const SizedBox(height: 16),
@@ -85,6 +91,145 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildDictionarySection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Integración con IA',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Configura tu API Key de Gemini para obtener definiciones contextuales mejoradas.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildApiKeyInput(context),
+          const SizedBox(height: 24),
+          Text(
+            'Prioridad de Búsqueda',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Arrastra para reordenar qué fuentes consultar primero.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildPriorityList(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApiKeyInput(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: TextEditingController(text: SettingsService.instance.geminiApiKey),
+      onChanged: (value) => SettingsService.instance.setGeminiApiKey(value),
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: 'Gemini API Key',
+        hintText: 'Pega tu API Key aquí',
+        prefixIcon: Icon(Icons.key_rounded, color: colorScheme.primary),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        filled: true,
+        fillColor: colorScheme.surface,
+      ),
+    );
+  }
+
+  Widget _buildPriorityList(BuildContext context) {
+    // Necesitamos un StatefulWidget local para manejar el reordenamiento visualmente
+    // antes de guardar, pero como SettingsScreen es Stateless, usaremos un StatefulBuilder
+    // o simplemente reconstruiremos al cambiar.
+    
+    return StatefulBuilder(
+      builder: (context, setState) {
+        final priorities = SettingsService.instance.dictionaryPriority;
+        
+        return ReorderableListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          onReorder: (oldIndex, newIndex) {
+            setState(() {
+              if (oldIndex < newIndex) {
+                newIndex -= 1;
+              }
+              // Crear una copia mutable de la lista antes de modificarla
+              final newPriorities = List<String>.from(priorities);
+              final item = newPriorities.removeAt(oldIndex);
+              newPriorities.insert(newIndex, item);
+              
+              // Guardar la nueva lista
+              SettingsService.instance.setDictionaryPriority(newPriorities);
+            });
+          },
+          children: [
+            for (final source in priorities)
+              ListTile(
+                key: ValueKey(source),
+                leading: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                title: Text(_getSourceName(source)),
+                trailing: Icon(_getSourceIcon(source), color: Theme.of(context).colorScheme.primary),
+                tileColor: Theme.of(context).colorScheme.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getSourceName(String source) {
+    switch (source) {
+      case 'gemini': return 'Gemini AI (Google)';
+      case 'local': return 'Diccionario Local (Offline)';
+      case 'web': return 'Web (FreeDictionaryAPI)';
+      default: return source;
+    }
+  }
+
+  IconData _getSourceIcon(String source) {
+    switch (source) {
+      case 'gemini': return Icons.auto_awesome_rounded;
+      case 'local': return Icons.sd_storage_rounded;
+      case 'web': return Icons.public_rounded;
+      default: return Icons.help_outline_rounded;
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

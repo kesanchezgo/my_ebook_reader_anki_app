@@ -1,8 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'local_dictionary_service.dart';
+import 'settings_service.dart';
 
-/// Servicio para consultar diccionarios (Local primero, luego Online)
+class DictionaryResult {
+  final String definition;
+  final String source; // 'Gemini AI', 'Diccionario Local', 'Web (FreeDictionary)', etc.
+
+  DictionaryResult({required this.definition, required this.source});
+}
+
+/// Servicio para consultar diccionarios (Local, Web, Gemini)
 class DictionaryService {
   final LocalDictionaryService _localDict = LocalDictionaryService();
   
@@ -13,7 +21,7 @@ class DictionaryService {
   static const String _freeDictionaryApiEsUrl = 'https://api.dictionaryapi.dev/api/v2/entries/es';
 
   /// Busca la definición de una palabra en inglés
-  Future<String?> lookupEnglish(String word) async {
+  Future<DictionaryResult?> lookupEnglish(String word) async {
     try {
       final response = await http.get(
         Uri.parse('$_freeDictionaryApiUrl/${word.toLowerCase()}'),
@@ -26,7 +34,10 @@ class DictionaryService {
           if (meanings.isNotEmpty) {
             final definitions = meanings[0]['definitions'] as List<dynamic>;
             if (definitions.isNotEmpty) {
-              return definitions[0]['definition'] as String;
+              return DictionaryResult(
+                definition: definitions[0]['definition'] as String,
+                source: 'Web (English)',
+              );
             }
           }
         }
@@ -39,7 +50,7 @@ class DictionaryService {
   }
 
   /// Busca la definición de una palabra en español
-  Future<String?> lookupSpanish(String word) async {
+  Future<DictionaryResult?> lookupSpanish(String word) async {
     try {
       final response = await http.get(
         Uri.parse('$_freeDictionaryApiEsUrl/${word.toLowerCase()}'),
@@ -52,7 +63,10 @@ class DictionaryService {
           if (meanings.isNotEmpty) {
             final definitions = meanings[0]['definitions'] as List<dynamic>;
             if (definitions.isNotEmpty) {
-              return definitions[0]['definition'] as String;
+              return DictionaryResult(
+                definition: definitions[0]['definition'] as String,
+                source: 'Web (Español)',
+              );
             }
           }
         }
@@ -64,71 +78,142 @@ class DictionaryService {
     }
   }
 
-  /// Método híbrido para obtener definición (Local -> API)
-  /// Retorna 'Definición no encontrada' si falla todo.
-  Future<String> getDefinition(String word) async {
-    final result = await lookup(word);
-    return result ?? 'Definición no encontrada';
+  /// Método principal para obtener definición usando la prioridad configurada
+  Future<DictionaryResult> getDefinition(String word) async {
+    if (word.trim().isEmpty) {
+      return DictionaryResult(definition: 'Palabra vacía', source: 'Sistema');
+    }
+
+    final cleanWord = word.trim().toLowerCase();
+    final priorities = SettingsService.instance.dictionaryPriority;
+
+    for (final source in priorities) {
+      DictionaryResult? result;
+      
+      switch (source) {
+        case 'gemini':
+          result = await _lookupGemini(cleanWord);
+          break;
+        case 'local':
+          result = await _lookupLocal(cleanWord);
+          break;
+        case 'web':
+          result = await _lookupWeb(cleanWord);
+          break;
+      }
+
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return DictionaryResult(
+      definition: 'Definición no encontrada en ninguna fuente.',
+      source: 'Sistema',
+    );
+  }
+
+  Future<DictionaryResult?> _lookupLocal(String word) async {
+    print('💾 Buscando en diccionario local: $word');
+    try {
+      final localResult = await _localDict.lookup(word);
+      if (localResult != null) {
+        print('✅ Encontrado en diccionario local');
+        return DictionaryResult(
+          definition: localResult['definition'] ?? localResult['translation'],
+          source: 'Diccionario Local',
+        );
+      }
+    } catch (e) {
+      print('⚠️ Error en diccionario local: $e');
+    }
+    return null;
+  }
+
+  Future<DictionaryResult?> _lookupWeb(String word) async {
+    print('🌐 Buscando en Web...');
+    
+    // Detectar si parece español
+    final looksSpanish = _looksLikeSpanish(word);
+    
+    if (looksSpanish) {
+      print('🔍 Detectado español: $word');
+      
+      // Intentar con la palabra original
+      var result = await lookupSpanish(word);
+      if (result != null) return result;
+      
+      // Intentar sin tildes
+      final withoutAccents = _removeAccents(word);
+      if (withoutAccents != word) {
+        print('🔍 Reintentando sin acentos: $withoutAccents');
+        result = await lookupSpanish(withoutAccents);
+        if (result != null) return result;
+      }
+    }
+    
+    // Intentar en inglés
+    print('🔍 Buscando en inglés: $word');
+    var result = await lookupEnglish(word);
+    if (result != null) return result;
+    
+    // Último recurso: si no parecía español, intentar español
+    if (!looksSpanish) {
+      print('🔍 Último intento en español: $word');
+      result = await lookupSpanish(word);
+      if (result != null) return result;
+    }
+    
+    return null;
+  }
+
+  Future<DictionaryResult?> _lookupGemini(String word) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('🤖 Buscando en Gemini AI: $word');
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": "Define brevemente la palabra '$word' en español. Si tiene múltiples acepciones, da la más común. Máximo 40 palabras."
+            }]
+          }]
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              return DictionaryResult(
+                definition: text.trim(),
+                source: 'Gemini AI',
+              );
+            }
+          }
+        }
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error consultando Gemini: $e');
+    }
+    return null;
   }
 
   /// Importa un diccionario desde JSON a la base de datos local
   Future<int> importDictionary(String jsonPath, {required bool isSpanishDict}) async {
     return await _localDict.importDictionary(jsonPath, isSpanishDict: isSpanishDict);
-  }
-
-  /// Busca la definición intentando primero en español y luego en inglés
-  /// Mejorado con diccionario local primero, luego online
-  Future<String?> lookup(String word) async {
-    if (word.trim().isEmpty) return null;
-    
-    final cleanWord = word.trim().toLowerCase();
-    
-    // 1. Intentar diccionario local primero (RÁPIDO, OFFLINE)
-    print('💾 Buscando en diccionario local: $cleanWord');
-    try {
-      final localResult = await _localDict.lookup(cleanWord);
-      if (localResult != null) {
-        print('✅ Encontrado en diccionario local');
-        return localResult['definition'] ?? localResult['translation'];
-      }
-    } catch (e) {
-      print('⚠️ Error en diccionario local: $e');
-    }
-    
-    // 2. Si no está local, buscar online y guardar
-    print('🌐 Diccionario local vacío, buscando online...');
-    
-    // Detectar si parece español
-    final looksSpanish = _looksLikeSpanish(cleanWord);
-    
-    if (looksSpanish) {
-      print('🔍 Detectado español: $cleanWord');
-      
-      // Intentar con la palabra original
-      String? definition = await lookupSpanish(cleanWord);
-      if (definition != null) return definition;
-      
-      // Intentar sin tildes
-      final withoutAccents = _removeAccents(cleanWord);
-      if (withoutAccents != cleanWord) {
-        print('🔍 Reintentando sin acentos: $withoutAccents');
-        definition = await lookupSpanish(withoutAccents);
-        if (definition != null) return definition;
-      }
-    }
-    
-    // Intentar en inglés
-    print('🔍 Buscando en inglés: $cleanWord');
-    String? definition = await lookupEnglish(cleanWord);
-    if (definition != null) return definition;
-    
-    // Último recurso: si no parecía español, intentar español
-    if (!looksSpanish) {
-      print('🔍 Último intento en español: $cleanWord');
-      definition = await lookupSpanish(cleanWord);
-    }
-    
-    return definition;
   }
   
   /// Detecta si una palabra parece español
