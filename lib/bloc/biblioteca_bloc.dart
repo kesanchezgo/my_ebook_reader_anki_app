@@ -1,16 +1,17 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
 import '../models/book.dart';
 import '../services/local_storage_service.dart';
 import '../services/file_service.dart';
+import '../services/epub_service.dart';
 import 'biblioteca_event.dart';
 import 'biblioteca_state.dart';
+import 'dart:io';
 
 /// Bloc para gestionar el estado de la Biblioteca
 class BibliotecaBloc extends Bloc<BibliotecaEvent, BibliotecaState> {
   final LocalStorageService _storageService;
   final FileService _fileService;
-  final Uuid _uuid = const Uuid();
+  final EpubService _epubService = EpubService();
 
   BibliotecaBloc({
     required LocalStorageService storageService,
@@ -75,15 +76,23 @@ class BibliotecaBloc extends Bloc<BibliotecaEvent, BibliotecaState> {
         return;
       }
 
-      // Crear el objeto Book
-      final fileExtension = _fileService.getFileExtension(fileName);
-      final book = Book(
-        id: _uuid.v4(),
-        title: fileName.replaceAll('.$fileExtension', ''),
-        filePath: newPath,
-        fileType: fileExtension,
-        addedDate: DateTime.now(),
-      );
+      // Crear el objeto Book usando EpubService para metadatos y validación
+      Book book;
+      try {
+        book = await _epubService.loadBookInfo(File(newPath));
+      } catch (e) {
+        // Si falla (ej. duplicado), borramos el archivo copiado
+        await _fileService.deleteFile(newPath);
+        if (e is DuplicateBookException) {
+          emit(BibliotecaError(e.message));
+        } else {
+          emit(BibliotecaError('Error al procesar el libro: $e'));
+        }
+        // Recargar lista para quitar estado de carga
+        final books = await _storageService.getBooks();
+        emit(BibliotecaLoaded(books));
+        return;
+      }
 
       // Guardar en la base de datos local
       final success = await _storageService.addBook(book);

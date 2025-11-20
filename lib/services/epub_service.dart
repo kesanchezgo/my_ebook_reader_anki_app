@@ -4,6 +4,15 @@ import 'dart:typed_data';
 import 'package:epubx/epubx.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:path/path.dart' as p;
+import '../models/book.dart';
+import 'local_storage_service.dart';
+
+class DuplicateBookException implements Exception {
+  final String message;
+  DuplicateBookException(this.message);
+  @override
+  String toString() => message;
+}
 
 /// Modelo de datos para un capítulo procesado (View Data vs Logic Data)
 class ChapterData {
@@ -19,6 +28,67 @@ class ChapterData {
 }
 
 class EpubService {
+  /// Carga la información del libro desde el archivo EPUB
+  Future<Book> loadBookInfo(File file) async {
+    // 1. Generar ID único basado en la ruta absoluta
+    final String uniqueId = file.absolute.path.hashCode.toString();
+
+    // 2. Verificar duplicados
+    final storage = await LocalStorageService.init();
+    final books = await storage.getBooks();
+    
+    // Verificar si ya existe un libro con este ID (o ruta)
+    if (books.any((b) => b.id == uniqueId || b.filePath == file.path)) {
+      throw DuplicateBookException('El libro ya existe en la biblioteca.');
+    }
+
+    // 3. Leer metadatos del EPUB
+    final bytes = await file.readAsBytes();
+    final epubBook = await EpubReader.readBook(bytes);
+    
+    // Título
+    String title = epubBook.Title ?? '';
+    final filename = p.basenameWithoutExtension(file.path);
+    
+    // Si el título está vacío, es igual al nombre de archivo, O contiene guiones bajos (indicativo de nombre técnico)
+    if (title.trim().isEmpty || title.trim() == filename || title.contains('_')) {
+      // Preferimos el nombre del archivo limpio si el título interno parece "sucio"
+      title = _beautifyFilename(filename);
+    }
+    
+    // Autor
+    String author = epubBook.Author ?? '';
+    if (epubBook.AuthorList != null && epubBook.AuthorList!.isNotEmpty) {
+       author = epubBook.AuthorList!.join(', ');
+    }
+    
+    // Si no hay autor, intentamos buscar en el nombre del archivo si tiene formato "Autor - Título"
+    if (author.trim().isEmpty) {
+      if (filename.contains(' - ')) {
+        final parts = filename.split(' - ');
+        // Asumimos que la primera parte podría ser el autor si es corta
+        if (parts.length >= 2 && parts[0].length < 40) {
+          author = _beautifyFilename(parts[0]);
+          // Si usamos el nombre de archivo para el autor, actualizamos el título con la segunda parte
+          if (title == _beautifyFilename(filename)) {
+             title = _beautifyFilename(parts.sublist(1).join(' '));
+          }
+        }
+      }
+    }
+    // Si sigue vacío, lo dejamos vacío visualmente (no "Desconocido")
+
+    // 4. Crear objeto Book
+    return Book(
+      id: uniqueId,
+      title: title,
+      author: author,
+      filePath: file.path,
+      fileType: 'epub',
+      addedDate: DateTime.now(),
+    );
+  }
+
   /// Parsea el archivo EPUB y devuelve una lista de objetos ChapterData.
   Future<List<ChapterData>> loadChapters(File file) async {
     try {
@@ -197,5 +267,21 @@ class EpubService {
       print('Error extrayendo portada: $e');
       return null;
     }
+  }
+
+  String _beautifyFilename(String filename) {
+    // 1. Reemplazar caracteres especiales por espacios
+    String cleanName = filename.replaceAll(RegExp(r'[_\-\.]'), ' ');
+    
+    // 2. Eliminar palabras comunes de nombres de archivo (case insensitive)
+    cleanName = cleanName.replaceAll(RegExp(r'\b(trad|epub|v1|v2|v3|final|corregido)\b', caseSensitive: false), '');
+    
+    // 3. Capitalizar cada palabra (Title Case)
+    cleanName = cleanName.split(' ').where((word) => word.isNotEmpty).map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+    
+    return cleanName.trim();
   }
 }

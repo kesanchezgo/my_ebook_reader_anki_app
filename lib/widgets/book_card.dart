@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -52,160 +53,100 @@ class _BookCardState extends State<BookCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Card(
-      elevation: 4,
+      elevation: 6,
+      shadowColor: Colors.black.withOpacity(0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Portada (Icono)
             Expanded(
               flex: 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _getColorForBookType(widget.book.fileType),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Portada
-                    FutureBuilder<Uint8List?>(
-                      future: _coverFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(12),
-                              topRight: Radius.circular(12),
-                            ),
-                            child: Image.memory(
-                              snapshot.data!,
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        }
-                        return Center(
-                          child: Icon(
-                            _getIconForBookType(widget.book.fileType),
-                            size: 80,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                        );
-                      },
-                    ),
-                    
-                    // Tipo de archivo
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          widget.book.fileType.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    // Botón eliminar
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.white),
-                          onPressed: widget.onDelete,
-                          iconSize: 20,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildCover(theme),
+                  _buildDeleteButton(theme),
+                  if (widget.book.progress > 0)
+                    _buildProgressBadge(theme),
+                ],
               ),
             ),
+            
+            // Info del libro
             Expanded(
               flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
+              child: Container(
+                color: theme.colorScheme.surface,
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.book.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.book.currentPage > 0) ...[
-                          LinearProgressIndicator(
-                            value: widget.book.progress / 100,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              _getColorForBookType(widget.book.fileType),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.book.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              height: 1.2,
+                              color: theme.textTheme.bodyLarge?.color,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
-                        ],
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${widget.book.progress.toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.bold,
-                              ),
+                          Text(
+                            widget.book.author.isNotEmpty ? widget.book.author : 'Autor Desconocido',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
                             ),
-                            if (_totalSeconds > 0)
-                              Row(
-                                children: [
-                                  Icon(Icons.access_time, size: 10, color: Colors.grey[600]),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    _formatTime(_totalSeconds),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (_totalSeconds > 0) ...[
+                          Icon(Icons.access_time_rounded, size: 12, color: theme.colorScheme.primary.withOpacity(0.7)),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatTime(_totalSeconds),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (widget.book.progress > 0) ...[
+                          Icon(Icons.pie_chart_outline_rounded, size: 12, color: theme.colorScheme.primary.withOpacity(0.7)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.book.progress.toInt()}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -218,14 +159,135 @@ class _BookCardState extends State<BookCard> {
     );
   }
 
-  /// Retorna el color según el tipo de archivo
-  Color _getColorForBookType(String fileType) {
-    // Solo soportamos EPUB ahora, pero mantenemos el switch por si acaso
-    return Colors.blue[700]!;
+  Widget _buildCover(ThemeData theme) {
+    return AspectRatio(
+      aspectRatio: 2 / 3,
+      child: FutureBuilder<Uint8List?>(
+        future: _coverFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Fondo borroso (Blur Effect) para llenar espacios
+                Image.memory(
+                  snapshot.data!,
+                  fit: BoxFit.cover,
+                ),
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.3), // Oscurecer un poco el fondo borroso
+                  ),
+                ),
+                // 2. Imagen nítida en el centro
+                Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Image.memory(
+                      snapshot.data!,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          // Fallback Gradient
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primaryContainer,
+                  theme.colorScheme.surface,
+                ],
+              ),
+            ),
+            child: Center(
+              child: Text(
+                widget.book.title.isNotEmpty ? widget.book.title[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onPrimaryContainer.withOpacity(0.5),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
-  /// Retorna el icono según el tipo de archivo
-  IconData _getIconForBookType(String fileType) {
-    return Icons.menu_book;
+  Widget _buildDeleteButton(ThemeData theme) {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onDelete,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4), // Glassmorphism dark
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+                ),
+                child: const Icon(
+                  Icons.delete_rounded, 
+                  color: Colors.white70, 
+                  size: 20
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressBadge(ThemeData theme) {
+    return Positioned(
+      bottom: 8,
+      right: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          '${widget.book.progress.toInt()}%',
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 }

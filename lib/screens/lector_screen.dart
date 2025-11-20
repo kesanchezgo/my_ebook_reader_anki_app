@@ -13,6 +13,7 @@ import '../services/settings_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
 import '../widgets/anki_edit_modal.dart';
+import '../widgets/premium_toast.dart';
 
 class LectorScreen extends StatefulWidget {
   final Book book;
@@ -45,6 +46,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   int _readingSeconds = 0;
   
   // Progress
+  double _globalProgress = 0.0;
   double _chapterProgress = 0.0;
 
   @override
@@ -61,6 +63,17 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _saveReadingTime();
+      _saveCurrentProgress();
+    }
+  }
+
+  void _saveCurrentProgress() {
+    if (mounted) {
+      final updatedBook = widget.book.copyWith(
+        currentPage: _currentChapterIndex,
+        progressPercentage: _globalProgress * 100,
+      );
+      context.read<BibliotecaBloc>().add(UpdateBook(updatedBook));
     }
   }
 
@@ -102,8 +115,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     try {
       final storageService = await LocalStorageService.init();
       await storageService.saveProgress(widget.book.id, index);
+      
+      // Guardar también el progreso global en el objeto Book
       if (mounted) {
-        context.read<BibliotecaBloc>().add(UpdateBook(widget.book.copyWith(currentPage: index)));
+        final updatedBook = widget.book.copyWith(
+          currentPage: index,
+          progressPercentage: _globalProgress * 100,
+        );
+        context.read<BibliotecaBloc>().add(UpdateBook(updatedBook));
       }
     } catch (e) {
       debugPrint('Error saving progress: $e');
@@ -268,7 +287,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             setState(() {});
                             setModalState(() {});
                           },
-                          child: const Text('Restaurar', style: TextStyle(color: Colors.blue)),
+                          child: Text('Restaurar', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                         ),
                       ],
                     ),
@@ -282,7 +301,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       min: 14.0,
                       max: 32.0,
                       divisions: 18,
-                      activeColor: Colors.blue,
+                      activeColor: Theme.of(context).colorScheme.primary,
                       inactiveColor: Colors.grey[800],
                       onChanged: (value) {
                         setModalState(() => _fontSize = value);
@@ -352,20 +371,6 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                     ),
                     
                     const SizedBox(height: 24),
-                    
-                    // Tema
-                    const Text('Tema', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: SettingsService.instance.appThemes.values.map((theme) {
-                        return _buildThemeButton(
-                          theme,
-                          setModalState
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -378,6 +383,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   
   Widget _buildAlignButton(String label, TextAlign align, StateSetter setModalState) {
     final isSelected = _textAlign == align;
+    final primaryColor = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () {
         setModalState(() => _textAlign = align);
@@ -387,73 +393,21 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.grey[900],
+          color: isSelected ? primaryColor.withOpacity(0.2) : Colors.grey[900],
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey[800]!,
+            color: isSelected ? primaryColor : Colors.grey[800]!,
           ),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.blue : Colors.grey,
+              color: isSelected ? primaryColor : Colors.grey,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildThemeButton(AppTheme theme, StateSetter setModalState) {
-    final isSelected = _backgroundColor == theme.backgroundColor;
-    return GestureDetector(
-      onTap: () {
-        setModalState(() {
-          _backgroundColor = theme.backgroundColor;
-          _textColor = theme.textColor;
-        });
-        setState(() {
-          _backgroundColor = theme.backgroundColor;
-          _textColor = theme.textColor;
-        });
-        SettingsService.instance.setThemeId(theme.id);
-      },
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: theme.backgroundColor,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? Colors.blue : Colors.grey,
-                width: isSelected ? 3 : 1,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                'Aa',
-                style: TextStyle(
-                  color: theme.textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            theme.name.split(' ').first,
-            style: TextStyle(
-              color: isSelected ? Colors.blue : Colors.grey,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -464,6 +418,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     _pageController.dispose();
     _readingTimer?.cancel();
     _saveReadingTime();
+    _saveCurrentProgress();
     super.dispose();
   }
 
@@ -495,7 +450,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   onPageChanged: (index) {
                     setState(() {
                       _currentChapterIndex = index;
-                      _chapterProgress = 0.0; // Reset visual progress on chapter change
+                      // No reseteamos _globalProgress aquí, se actualizará con el scroll del nuevo capítulo
                     });
                     _saveProgress(index);
                   },
@@ -511,20 +466,38 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       onSelectionChanged: (selection) {
                         setState(() => _currentSelection = selection);
                       },
-                      onProgressChanged: (progress) {
-                        // Actualizar progreso solo si cambia significativamente para evitar rebuilds excesivos
-                        if ((progress - _chapterProgress).abs() > 0.01) {
-                          // Usamos addPostFrameCallback para evitar setState durante build/layout
+                      onProgressChanged: (chapterProgress) {
+                        // Actualizar progreso del capítulo local
+                        if ((chapterProgress - _chapterProgress).abs() > 0.001) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() => _chapterProgress = progress);
+                            if (mounted) setState(() => _chapterProgress = chapterProgress);
                           });
+                        }
+
+                        // Calcular progreso global: (capítulo actual + progreso del capítulo) / total capítulos
+                        final totalChapters = chapters.length;
+                        if (totalChapters > 0) {
+                          final globalProgress = (index + chapterProgress) / totalChapters;
+                          
+                          // Actualizar solo si hay cambio significativo
+                          if ((globalProgress - _globalProgress).abs() > 0.001) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                setState(() => _globalProgress = globalProgress);
+                                // Guardar progreso global periódicamente o al salir, 
+                                // pero aquí actualizamos el estado para la UI.
+                                // Para persistencia, lo hacemos en _saveProgress o al salir.
+                                // Sin embargo, _saveProgress solo se llama al cambiar de capítulo.
+                                // Deberíamos actualizar el libro también si el progreso dentro del capítulo cambia mucho?
+                                // Mejor no saturar el Bloc. Lo guardamos al pausar/salir.
+                              }
+                            });
+                          }
                         }
                       },
                       onSaveToAnki: () {
                         if (_currentSelection.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Selecciona una palabra primero')),
-                          );
+                          PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
                           return;
                         }
 
@@ -563,19 +536,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 '${widget.book.title} (${_currentChapterIndex + 1})',
                 style: const TextStyle(fontSize: 16),
               ),
-              backgroundColor: const Color(0xFF1E1E1E).withOpacity(0.95),
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF1E1E1E).withOpacity(0.95),
+              foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
               elevation: 0,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
                   onPressed: _showSettingsModal,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.list),
-                  onPressed: () {
-                    // TODO: Implementar índice
-                  },
                 ),
               ],
             ),
@@ -589,13 +556,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             right: 0,
             child: Container(
               height: 50,
-              color: const Color(0xFF1E1E1E).withOpacity(0.95),
+              color: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF1E1E1E).withOpacity(0.95),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   Text(
                     _formatReadingTime(),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -605,13 +572,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         LinearProgressIndicator(
                           value: _chapterProgress,
                           backgroundColor: Colors.grey[800],
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                           minHeight: 2,
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${(_chapterProgress * 100).toInt()}% del capítulo',
-                          style: const TextStyle(color: Colors.grey, fontSize: 10),
+                          'Capítulo: ${(_chapterProgress * 100).toInt()}%',
+                          style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, fontSize: 10),
                         ),
                       ],
                     ),
@@ -620,7 +587,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   // Botón flotante de acción rápida para Anki si hay selección
                   if (_currentSelection.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                      icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
                       onPressed: () {
                          // Trigger save logic via callback or direct call if possible
                          // Since logic is in PageView builder, we might need a global key or similar
@@ -667,36 +634,49 @@ class _ChapterView extends StatefulWidget {
 }
 
 class _ChapterViewState extends State<_ChapterView> {
-  final ScrollController _scrollController = ScrollController();
+  late ScrollController _scrollController;
   Timer? _scrollSaveTimer;
 
   @override
   void initState() {
     super.initState();
-    _restoreScrollPosition();
+    
+    // 1. Obtener offset guardado de forma síncrona
+    final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
+    final savedOffset = SettingsService.instance.getDouble(key) ?? 0.0;
+    
+    // 2. Inicializar controller con el offset
+    _scrollController = ScrollController(initialScrollOffset: savedOffset);
     _scrollController.addListener(_onScroll);
+    
+    // 3. Intentar restaurar posición después de renderizado
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients && savedOffset > 0) {
+        // Si el contenido cargó y es más pequeño que el offset guardado, 
+        // el controller lo habrá clampeado. Intentamos saltar de nuevo si creció.
+        // Pero HtmlWidget puede tardar.
+        // Una opción es reintentar un par de veces.
+        if (_scrollController.position.maxScrollExtent < savedOffset) {
+           // El contenido aún no carga completo.
+           // No podemos hacer mucho más que esperar eventos de layout.
+           // Pero HtmlWidget no notifica.
+        } else {
+           // Si ya cabe, nos aseguramos (aunque initialScrollOffset debió funcionar)
+           _scrollController.jumpTo(savedOffset);
+        }
+      }
+      _onScroll();
+    });
   }
 
   @override
   void dispose() {
     _scrollSaveTimer?.cancel();
+    // Guardar posición al salir
+    _saveScrollPosition();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _restoreScrollPosition() async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
-    final savedOffset = prefs.getDouble(key);
-    
-    if (savedOffset != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(savedOffset);
-        }
-      });
-    }
   }
 
   void _onScroll() {
@@ -704,21 +684,44 @@ class _ChapterViewState extends State<_ChapterView> {
     if (_scrollController.hasClients) {
       final maxScroll = _scrollController.position.maxScrollExtent;
       final currentScroll = _scrollController.offset;
-      if (maxScroll > 0) {
-        widget.onProgressChanged(currentScroll / maxScroll);
+      
+      double progress = 0.0;
+      if (maxScroll > 10) { // Ignorar si el contenido es muy pequeño (carga inicial)
+        progress = currentScroll / maxScroll;
+      } else {
+        // Si el contenido es muy pequeño, probablemente está cargando o es vacío.
+        // Mantenemos 0.0 para no mostrar 100% falsamente.
+        // A menos que realmente sea un capítulo de una línea, pero es raro.
+        progress = 0.0;
       }
+      
+      // Asegurar rango 0.0 - 1.0
+      progress = progress.clamp(0.0, 1.0);
+      
+      widget.onProgressChanged(progress);
     }
 
     // Debounce save
     if (_scrollSaveTimer?.isActive ?? false) _scrollSaveTimer!.cancel();
-    _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
+    // Solo guardar si maxScroll > 0 para evitar sobrescribir con 0 al inicio
+    if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
+       _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
+    }
   }
 
   Future<void> _saveScrollPosition() async {
-    if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
+    // No verificamos mounted aquí porque queremos que se guarde incluso si el widget se está desmontando
+    // Usamos SettingsService para guardar (ahora expone métodos)
     final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
-    await prefs.setDouble(key, _scrollController.offset);
+    // Si el controller ya fue disposed, no podemos leer offset.
+    // Pero _saveScrollPosition se llama desde dispose ANTES de disposear el controller.
+    try {
+      if (_scrollController.hasClients) {
+        await SettingsService.instance.setDouble(key, _scrollController.offset);
+      }
+    } catch (e) {
+      debugPrint('Error saving scroll position: $e');
+    }
   }
 
   @override
@@ -757,6 +760,8 @@ class _ChapterViewState extends State<_ChapterView> {
         ),
         child: HtmlWidget(
           widget.chapter.htmlContent,
+          // Key para forzar rebuild si cambia alineación o fuente
+          key: ValueKey('html_${widget.chapterIndex}_${widget.textAlign}_${widget.fontFamily}_${widget.fontSize}'),
           textStyle: GoogleFonts.getFont(
             widget.fontFamily,
             fontSize: widget.fontSize,
@@ -776,12 +781,7 @@ class _ChapterViewState extends State<_ChapterView> {
              if (url.contains('#')) {
                // TODO: Implementar navegación real a notas (requiere parsing complejo de IDs)
                // Por ahora, evitamos el crash y notificamos al usuario
-               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(
-                   content: Text('Nota al pie: Navegación en desarrollo'),
-                   duration: Duration(seconds: 1),
-                 ),
-               );
+               PremiumToast.show(context, 'Nota al pie: Navegación en desarrollo');
                return true; // Consumir el evento para evitar abrir navegador
              }
              return false; // Dejar pasar enlaces externos normales

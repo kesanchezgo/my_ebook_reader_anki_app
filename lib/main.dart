@@ -6,6 +6,7 @@ import 'bloc/biblioteca_event.dart';
 import 'services/local_storage_service.dart';
 import 'services/file_service.dart';
 import 'services/settings_service.dart';
+import 'config/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,33 +39,18 @@ class MyApp extends StatelessWidget {
         storageService: storageService,
         fileService: fileService,
       )..add(LoadBooks()),
-      child: MaterialApp(
-        title: 'Mi Lector Anki',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 2,
-          ),
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 2,
-          ),
-        ),
-        themeMode: ThemeMode.system,
-        home: const BibliotecaScreen(),
+      child: ValueListenableBuilder<String>(
+        valueListenable: SettingsService.instance.themeNotifier,
+        builder: (context, themeId, child) {
+          final appTheme = AppTheme.getTheme(themeId);
+          
+          return MaterialApp(
+            title: 'Mi Lector Anki',
+            debugShowCheckedModeBanner: false,
+            theme: appTheme.themeData,
+            home: const BibliotecaScreen(),
+          );
+        },
       ),
     );
   }

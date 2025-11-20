@@ -225,7 +225,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700),
+                            Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 12),
                             const Text(
                               'Cómo funciona',
@@ -314,7 +314,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                         
                         // Botón importar
                         ListTile(
-                          leading: const Icon(Icons.file_upload, color: Colors.blue),
+                          leading: Icon(Icons.file_upload, color: Theme.of(context).colorScheme.primary),
                           title: const Text('Importar diccionario'),
                           subtitle: const Text('Formato JSON monolingüe (palabra y definición en el mismo idioma)'),
                           trailing: const Icon(Icons.chevron_right),

@@ -4,44 +4,52 @@ import 'package:equatable/equatable.dart';
 class Book extends Equatable {
   final String id;
   final String title;
+  final String author;
   final String filePath;
   final String fileType; // 'pdf' o 'epub'
   final DateTime addedDate;
   final int currentPage;
   final int totalPages;
   final String? coverImage; // Path a la imagen de portada (opcional)
+  final double progressPercentage; // Progreso global exacto (0.0 - 100.0)
 
   const Book({
     required this.id,
     required this.title,
+    this.author = 'Autor Desconocido',
     required this.filePath,
     required this.fileType,
     required this.addedDate,
     this.currentPage = 0,
     this.totalPages = 0,
     this.coverImage,
+    this.progressPercentage = 0.0,
   });
 
   /// Crea una copia del libro con los campos especificados modificados
   Book copyWith({
     String? id,
     String? title,
+    String? author,
     String? filePath,
     String? fileType,
     DateTime? addedDate,
     int? currentPage,
     int? totalPages,
     String? coverImage,
+    double? progressPercentage,
   }) {
     return Book(
       id: id ?? this.id,
       title: title ?? this.title,
+      author: author ?? this.author,
       filePath: filePath ?? this.filePath,
       fileType: fileType ?? this.fileType,
       addedDate: addedDate ?? this.addedDate,
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
       coverImage: coverImage ?? this.coverImage,
+      progressPercentage: progressPercentage ?? this.progressPercentage,
     );
   }
 
@@ -50,12 +58,14 @@ class Book extends Equatable {
     return {
       'id': id,
       'title': title,
+      'author': author,
       'filePath': filePath,
       'fileType': fileType,
       'addedDate': addedDate.toIso8601String(),
       'currentPage': currentPage,
       'totalPages': totalPages,
       'coverImage': coverImage,
+      'progressPercentage': progressPercentage,
     };
   }
 
@@ -64,17 +74,23 @@ class Book extends Equatable {
     return Book(
       id: json['id'] as String,
       title: json['title'] as String,
+      author: json['author'] as String? ?? 'Autor Desconocido',
       filePath: json['filePath'] as String,
       fileType: json['fileType'] as String,
       addedDate: DateTime.parse(json['addedDate'] as String),
       currentPage: json['currentPage'] as int? ?? 0,
       totalPages: json['totalPages'] as int? ?? 0,
       coverImage: json['coverImage'] as String?,
+      progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   /// Calcula el porcentaje de progreso de lectura
   double get progress {
+    // Si tenemos un porcentaje exacto guardado, lo usamos
+    if (progressPercentage > 0) return progressPercentage;
+    
+    // Fallback al cálculo por capítulos
     if (totalPages == 0) return 0.0;
     return (currentPage / totalPages) * 100;
   }
@@ -83,11 +99,13 @@ class Book extends Equatable {
   List<Object?> get props => [
         id,
         title,
+        author,
         filePath,
         fileType,
         addedDate,
         currentPage,
         totalPages,
         coverImage,
+        progressPercentage,
       ];
 }

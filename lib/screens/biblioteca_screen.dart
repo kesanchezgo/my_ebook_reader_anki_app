@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
 import '../bloc/biblioteca_state.dart';
 import '../models/book.dart';
 import '../widgets/book_card.dart';
+import '../widgets/premium_toast.dart';
 import 'lector_screen.dart';
 import 'vocabulario_screen.dart';
+import 'settings_screen.dart';
 
 /// Pantalla principal que muestra la biblioteca de libros
 class BibliotecaScreen extends StatelessWidget {
@@ -26,6 +29,18 @@ class BibliotecaScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const VocabularioScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configuración',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
                 ),
               );
             },
@@ -159,25 +174,89 @@ class BibliotecaScreen extends StatelessWidget {
 
   /// Elimina un libro de la biblioteca
   void _deleteBook(BuildContext context, Book book) {
+    bool deleteData = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar libro'),
-        content: Text('¿Estás seguro de que quieres eliminar "${book.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<BibliotecaBloc>().add(DeleteBook(book.id));
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Eliminar libro'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('¿Estás seguro de que quieres eliminar "${book.title}"?'),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: deleteData,
+                        activeColor: Theme.of(context).colorScheme.primary,
+                        onChanged: (value) {
+                          setState(() => deleteData = value ?? false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => deleteData = !deleteData),
+                        child: const Text(
+                          'Eliminar también datos de lectura (progreso, tiempo, etc.)',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (deleteData) {
+                    final prefs = await SharedPreferences.getInstance();
+                    // Eliminar tiempo de lectura
+                    await prefs.remove('reading_time_${book.id}');
+                    // Eliminar posiciones de scroll (esto es más difícil porque hay N capítulos)
+                    // Iteramos un número razonable o usamos un patrón si pudiéramos.
+                    // Como no sabemos cuántos capítulos hay aquí fácilmente sin cargar el libro,
+                    // intentamos borrar un rango razonable o dejamos residuos pequeños.
+                    // O mejor, SettingsService debería tener un método clearBookData.
+                    // Por ahora, borramos lo principal.
+                    for (int i = 0; i < 1000; i++) {
+                      if (prefs.containsKey('scroll_${book.id}_$i')) {
+                        await prefs.remove('scroll_${book.id}_$i');
+                      } else {
+                        // Si no encontramos el 0, puede que no haya empezado.
+                        // Si encontramos huecos, seguimos un poco más.
+                        if (i > 50) break; // Asumimos max 50 caps si no hay hits
+                      }
+                    }
+                  }
+                  
+                  if (context.mounted) {
+                    context.read<BibliotecaBloc>().add(DeleteBook(book.id));
+                    Navigator.pop(context);
+                    PremiumToast.show(context, 'Libro eliminado', isSuccess: true);
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Eliminar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

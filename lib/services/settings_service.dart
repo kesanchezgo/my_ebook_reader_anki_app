@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class AppTheme {
-  final String id;
-  final String name;
-  final Color backgroundColor;
-  final Color textColor;
-
-  const AppTheme({
-    required this.id,
-    required this.name,
-    required this.backgroundColor,
-    required this.textColor,
-  });
-}
+import '../config/app_theme.dart';
 
 class SettingsService {
   // Singleton pattern
@@ -22,6 +9,9 @@ class SettingsService {
   SettingsService._internal();
 
   SharedPreferences? _prefs;
+  
+  // Notifier for global theme changes
+  final ValueNotifier<String> themeNotifier = ValueNotifier<String>(AppTheme.darkPremium);
 
   // Keys
   static const String _keyFontFamily = 'font_family';
@@ -32,7 +22,7 @@ class SettingsService {
   // Defaults
   static const String _defaultFontFamily = 'Merriweather';
   static const double _defaultFontSize = 18.0;
-  static const String _defaultThemeId = 'dark_pro';
+  static const String _defaultThemeId = AppTheme.darkPremium;
   static const String _defaultTextAlign = 'justify';
 
   // Current State
@@ -47,43 +37,16 @@ class SettingsService {
   String get themeId => _themeId;
   String get textAlign => _textAlign;
 
-  // Themes Definition
-  static const Map<String, AppTheme> _themes = {
-    'dark_pro': AppTheme(
-      id: 'dark_pro',
-      name: 'Dark Pro',
-      backgroundColor: Color(0xFF121212),
-      textColor: Color(0xFFE0E0E0),
-    ),
-    'midnight_blue': AppTheme(
-      id: 'midnight_blue',
-      name: 'Midnight Blue',
-      backgroundColor: Color(0xFF15202B),
-      textColor: Color(0xFF8899A6),
-    ),
-    'deep_slate': AppTheme(
-      id: 'deep_slate',
-      name: 'Deep Slate',
-      backgroundColor: Color(0xFF1E1E1E),
-      textColor: Color(0xFFD4D4D4),
-    ),
-    'oled_black': AppTheme(
-      id: 'oled_black',
-      name: 'OLED True Black',
-      backgroundColor: Color(0xFF000000),
-      textColor: Color(0xFFA0A0A0),
-    ),
-    'soft_sepia': AppTheme(
-      id: 'soft_sepia',
-      name: 'Soft Sepia',
-      backgroundColor: Color(0xFFF5E6D3),
-      textColor: Color(0xFF5F4B32),
-    ),
-  };
+  // Themes Definition (Delegated to AppTheme)
+  Map<String, AppTheme> get appThemes => AppTheme.themes;
 
-  Map<String, AppTheme> get appThemes => _themes;
+  AppTheme get currentTheme => AppTheme.getTheme(_themeId);
 
-  AppTheme get currentTheme => _themes[_themeId] ?? _themes[_defaultThemeId]!;
+  // Helpers para acceso directo a SharedPreferences (Síncrono)
+  double? getDouble(String key) => _prefs?.getDouble(key);
+  Future<void> setDouble(String key, double value) async => await _prefs?.setDouble(key, value);
+  int? getInt(String key) => _prefs?.getInt(key);
+  Future<void> setInt(String key, int value) async => await _prefs?.setInt(key, value);
 
   /// Inicializa el servicio y carga las configuraciones
   Future<void> init() async {
@@ -98,6 +61,9 @@ class SettingsService {
     _fontSize = _prefs!.getDouble(_keyFontSize) ?? _defaultFontSize;
     _themeId = _prefs!.getString(_keyThemeId) ?? _defaultThemeId;
     _textAlign = _prefs!.getString(_keyTextAlign) ?? _defaultTextAlign;
+    
+    // Update notifier
+    themeNotifier.value = _themeId;
   }
 
   /// Guarda el tipo de fuente
@@ -116,8 +82,9 @@ class SettingsService {
 
   /// Guarda el tema seleccionado
   Future<void> setThemeId(String value) async {
-    if (_themes.containsKey(value)) {
+    if (AppTheme.themes.containsKey(value)) {
       _themeId = value;
+      themeNotifier.value = value; // Notify listeners
       _prefs ??= await SharedPreferences.getInstance();
       await _prefs!.setString(_keyThemeId, value);
     }
