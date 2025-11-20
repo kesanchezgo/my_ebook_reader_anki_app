@@ -17,12 +17,20 @@ class BibliotecaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Mi Biblioteca'),
+        title: const Text('Mi Biblioteca', style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.speaker_notes),
+            icon: const Icon(Icons.speaker_notes_rounded),
             tooltip: 'Mi Vocabulario',
             onPressed: () {
               Navigator.push(
@@ -34,7 +42,7 @@ class BibliotecaScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_rounded),
             tooltip: 'Configuración',
             onPressed: () {
               Navigator.push(
@@ -46,7 +54,7 @@ class BibliotecaScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               context.read<BibliotecaBloc>().add(RefreshBiblioteca());
             },
@@ -63,8 +71,8 @@ class BibliotecaScreen extends StatelessWidget {
         },
         builder: (context, state) {
           if (state is BibliotecaLoading || state is BibliotecaImporting) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
             );
           }
 
@@ -80,48 +88,54 @@ class BibliotecaScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Lógica movida al Bloc, pero aseguramos que el FilePicker solo acepte EPUB
-          // Nota: El evento ImportBook del Bloc debería manejar el FilePicker.
-          // Si el FilePicker está aquí en la UI (como sugería el código original del usuario), lo actualizamos.
-          // Asumimos que el Bloc maneja la lógica, pero si el usuario tenía código aquí:
-          /*
-          FilePickerResult? result = await FilePicker.platform.pickFiles(
-            type: FileType.custom,
-            allowedExtensions: ['epub'],
-          );
-          */
           context.read<BibliotecaBloc>().add(ImportBook());
         },
-        child: const Icon(Icons.add),
+        elevation: 4,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         tooltip: 'Importar libro (EPUB)',
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
 
   /// Widget para mostrar cuando no hay libros
   Widget _buildEmptyState(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.library_books,
-            size: 100,
-            color: Colors.grey[400],
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.library_books_rounded,
+              size: 64,
+              color: colorScheme.primary.withOpacity(0.5),
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Text(
-            'No hay libros en tu biblioteca',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
+            'Tu biblioteca está vacía',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
-            'Toca el botón + para importar tu primer libro',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
-                ),
+            'Importa tus libros EPUB para empezar a leer\ny crear tarjetas de vocabulario.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -131,13 +145,13 @@ class BibliotecaScreen extends StatelessWidget {
   /// Widget para mostrar la cuadrícula de libros
   Widget _buildBookGrid(BuildContext context, List<Book> books) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.7,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
+          childAspectRatio: 0.65, // Adjusted for new card height
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
         itemCount: books.length,
         itemBuilder: (context, index) {
@@ -180,67 +194,68 @@ class BibliotecaScreen extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
+          final theme = Theme.of(context);
           return AlertDialog(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Eliminar libro'),
+            backgroundColor: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text('Eliminar libro', style: TextStyle(fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('¿Estás seguro de que quieres eliminar "${book.title}"?'),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Checkbox(
-                        value: deleteData,
-                        activeColor: Theme.of(context).colorScheme.primary,
-                        onChanged: (value) {
-                          setState(() => deleteData = value ?? false);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => deleteData = !deleteData),
-                        child: const Text(
-                          'Eliminar también datos de lectura (progreso, tiempo, etc.)',
-                          style: TextStyle(fontSize: 14),
+                Text(
+                  '¿Estás seguro de que quieres eliminar "${book.title}"?',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                InkWell(
+                  onTap: () => setState(() => deleteData = !deleteData),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Checkbox(
+                            value: deleteData,
+                            activeColor: theme.colorScheme.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            onChanged: (value) {
+                              setState(() => deleteData = value ?? false);
+                            },
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Eliminar también datos de lectura',
+                            style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancelar'),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () async {
                   if (deleteData) {
                     final prefs = await SharedPreferences.getInstance();
-                    // Eliminar tiempo de lectura
                     await prefs.remove('reading_time_${book.id}');
-                    // Eliminar posiciones de scroll (esto es más difícil porque hay N capítulos)
-                    // Iteramos un número razonable o usamos un patrón si pudiéramos.
-                    // Como no sabemos cuántos capítulos hay aquí fácilmente sin cargar el libro,
-                    // intentamos borrar un rango razonable o dejamos residuos pequeños.
-                    // O mejor, SettingsService debería tener un método clearBookData.
-                    // Por ahora, borramos lo principal.
                     for (int i = 0; i < 1000; i++) {
                       if (prefs.containsKey('scroll_${book.id}_$i')) {
                         await prefs.remove('scroll_${book.id}_$i');
                       } else {
-                        // Si no encontramos el 0, puede que no haya empezado.
-                        // Si encontramos huecos, seguimos un poco más.
-                        if (i > 50) break; // Asumimos max 50 caps si no hay hits
+                        if (i > 50) break; 
                       }
                     }
                   }
@@ -251,7 +266,11 @@ class BibliotecaScreen extends StatelessWidget {
                     PremiumToast.show(context, 'Libro eliminado', isSuccess: true);
                   }
                 },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                  foregroundColor: theme.colorScheme.onError,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 child: const Text('Eliminar'),
               ),
             ],

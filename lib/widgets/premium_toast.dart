@@ -97,36 +97,27 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     
-    Color backgroundColor;
-    Color textColor;
+    // Minimalist style: Always dark/neutral background
+    final backgroundColor = const Color(0xFF1E1E1E); 
+    final textColor = Colors.white;
+    
     IconData icon;
     Color iconColor;
 
     if (widget.isError) {
-      backgroundColor = isDark ? const Color(0xFFCF6679) : const Color(0xFFB00020);
-      textColor = Colors.white;
       icon = Icons.error_outline_rounded;
-      iconColor = Colors.white;
+      iconColor = const Color(0xFFCF6679); // Soft red
     } else if (widget.isSuccess) {
-      backgroundColor = isDark ? const Color(0xFF03DAC6) : const Color(0xFF018786);
-      textColor = isDark ? Colors.black : Colors.white;
       icon = Icons.check_circle_outline_rounded;
-      iconColor = isDark ? Colors.black : Colors.white;
+      iconColor = const Color(0xFF81C784); // Soft green
     } else if (widget.isWarning) {
-      backgroundColor = isDark ? const Color(0xFFFFB74D) : const Color(0xFFF57C00);
-      textColor = isDark ? Colors.black : Colors.white;
       icon = Icons.warning_amber_rounded;
-      iconColor = isDark ? Colors.black : Colors.white;
+      iconColor = const Color(0xFFFFB74D); // Soft orange
     } else {
-      // Default / Info
-      backgroundColor = theme.colorScheme.surfaceContainerHighest;
-      textColor = theme.colorScheme.onSurface;
       icon = Icons.info_outline_rounded;
-      iconColor = theme.colorScheme.primary;
+      iconColor = Colors.white70;
     }
 
     return Positioned(
@@ -141,19 +132,19 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
             position: _offset,
             child: Center(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30), // More rounded (capsule)
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     decoration: BoxDecoration(
-                      color: backgroundColor.withOpacity(0.95), // Slightly more opaque for overlay
-                      borderRadius: BorderRadius.circular(20),
+                      color: backgroundColor.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                       border: Border.all(
@@ -164,14 +155,14 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon, color: iconColor, size: 22),
+                        Icon(icon, color: iconColor, size: 20),
                         const SizedBox(width: 12),
                         Flexible(
                           child: Text(
                             widget.message,
                             style: TextStyle(
                               color: textColor,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               fontSize: 14,
                               letterSpacing: 0.2,
                             ),

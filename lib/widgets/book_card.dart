@@ -67,94 +67,99 @@ class _BookCardState extends State<BookCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     
-    return Card(
-      elevation: 6,
-      shadowColor: Colors.black.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: widget.onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Portada (Icono)
-            Expanded(
-              flex: 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildCover(theme),
-                  _buildDeleteButton(theme),
-                  if (widget.book.progress > 0)
-                    _buildProgressBadge(theme),
-                ],
-              ),
-            ),
-            
-            // Info del libro
-            Expanded(
-              flex: 2,
-              child: Container(
-                color: theme.colorScheme.surface,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Portada (Icono)
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.book.title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              height: 1.2,
-                              color: theme.textTheme.bodyLarge?.color,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.book.author.isNotEmpty ? widget.book.author : 'Autor Desconocido',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (_totalSeconds > 0) ...[
-                          Icon(Icons.access_time_rounded, size: 12, color: theme.colorScheme.primary.withOpacity(0.7)),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatTime(_totalSeconds),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                        // El porcentaje ya se muestra en el badge de la portada
-                      ],
-                    ),
+                    _buildCover(theme),
+                    _buildDeleteButton(theme),
+                    if (widget.book.progress > 0)
+                      _buildProgressBadge(theme),
                   ],
                 ),
               ),
-            ),
-          ],
+              
+              // Info del libro
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.book.title,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                height: 1.3,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.book.author.isNotEmpty ? widget.book.author : 'Autor Desconocido',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (_totalSeconds > 0) ...[
+                            Icon(Icons.access_time_rounded, size: 14, color: colorScheme.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatTime(_totalSeconds),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -176,9 +181,9 @@ class _BookCardState extends State<BookCard> {
                   fit: BoxFit.cover,
                 ),
                 BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                   child: Container(
-                    color: Colors.black.withOpacity(0.3), // Oscurecer un poco el fondo borroso
+                    color: Colors.black.withOpacity(0.2),
                   ),
                 ),
                 // 2. Imagen nítida en el centro
@@ -187,9 +192,9 @@ class _BookCardState extends State<BookCard> {
                     decoration: BoxDecoration(
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -210,7 +215,7 @@ class _BookCardState extends State<BookCard> {
                 end: Alignment.bottomRight,
                 colors: [
                   theme.colorScheme.primaryContainer,
-                  theme.colorScheme.surface,
+                  theme.colorScheme.surfaceContainerHighest,
                 ],
               ),
             ),
@@ -220,7 +225,7 @@ class _BookCardState extends State<BookCard> {
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onPrimaryContainer.withOpacity(0.5),
+                  color: theme.colorScheme.onPrimaryContainer.withOpacity(0.4),
                 ),
               ),
             ),
@@ -237,7 +242,7 @@ class _BookCardState extends State<BookCard> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -246,14 +251,14 @@ class _BookCardState extends State<BookCard> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4), // Glassmorphism dark
+                  color: Colors.black.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
                 ),
                 child: const Icon(
-                  Icons.delete_rounded, 
-                  color: Colors.white70, 
-                  size: 20
+                  Icons.delete_outline_rounded, 
+                  color: Colors.white, 
+                  size: 18
                 ),
               ),
             ),
@@ -268,15 +273,15 @@ class _BookCardState extends State<BookCard> {
       bottom: 8,
       right: 8,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: theme.colorScheme.primary,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: theme.colorScheme.primary.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -284,8 +289,8 @@ class _BookCardState extends State<BookCard> {
           '${widget.book.progress.toInt()}%',
           style: TextStyle(
             color: theme.colorScheme.onPrimary,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),

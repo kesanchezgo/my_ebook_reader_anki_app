@@ -3,6 +3,7 @@ import '../models/anki_card.dart';
 import '../services/anki_database_service.dart';
 import '../services/export_service.dart';
 import '../services/tts_service.dart';
+import '../widgets/premium_toast.dart';
 import 'dictionary_settings_screen.dart';
 
 /// Pantalla para visualizar y gestionar el vocabulario guardado
@@ -62,12 +63,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   
   Future<void> _exportCards() async {
     if (_cards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay tarjetas para exportar'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      PremiumToast.show(context, 'No hay tarjetas para exportar', isWarning: true);
       return;
     }
     
@@ -95,12 +91,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       
       // Mostrar éxito
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✓ ${_cards.length} tarjetas exportadas'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        PremiumToast.show(context, '✓ ${_cards.length} tarjetas exportadas', isSuccess: true);
       }
       
     } catch (e) {
@@ -109,12 +100,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       
       // Mostrar error
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al exportar: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        PremiumToast.show(context, 'Error al exportar: $e', isError: true);
       }
     }
   }
@@ -144,12 +130,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       _loadCards();
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Tarjeta eliminada'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        PremiumToast.show(context, 'Tarjeta eliminada', isSuccess: true);
       }
     }
   }
@@ -165,13 +146,20 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   @override
   Widget build(BuildContext context) {
     final stats = _exportService.getExportStats(_cards);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Mi Vocabulario'),
+        title: const Text('Mi Vocabulario', style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.book),
+            icon: const Icon(Icons.book_rounded),
             tooltip: 'Diccionarios',
             onPressed: () {
               Navigator.push(
@@ -183,7 +171,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.file_download),
+            icon: const Icon(Icons.file_download_rounded),
             tooltip: 'Exportar a CSV',
             onPressed: _cards.isEmpty ? null : _exportCards,
           ),
@@ -193,17 +181,23 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
         children: [
           // Barra de búsqueda
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Buscar palabras...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar palabras...',
+                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                  prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                ),
+                style: TextStyle(color: colorScheme.onSurface),
+                onChanged: (value) => setState(() => _searchQuery = value),
+              ),
             ),
           ),
           
@@ -211,75 +205,85 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
           if (_cards.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatItem(
-                        icon: Icons.book,
-                        label: 'Tarjetas',
-                        value: '${stats['total']}',
-                      ),
-                      _StatItem(
-                        icon: Icons.library_books,
-                        label: 'Libros',
-                        value: '${stats['books']}',
-                      ),
-                      _StatItem(
-                        icon: Icons.volume_up,
-                        label: 'Con audio',
-                        value: '${stats['withAudio']}',
-                      ),
-                    ],
-                  ),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: colorScheme.primary.withOpacity(0.1)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _StatItem(
+                      icon: Icons.style_rounded,
+                      label: 'Tarjetas',
+                      value: '${stats['total']}',
+                    ),
+                    Container(width: 1, height: 30, color: colorScheme.outlineVariant),
+                    _StatItem(
+                      icon: Icons.library_books_rounded,
+                      label: 'Libros',
+                      value: '${stats['books']}',
+                    ),
+                    Container(width: 1, height: 30, color: colorScheme.outlineVariant),
+                    _StatItem(
+                      icon: Icons.volume_up_rounded,
+                      label: 'Con audio',
+                      value: '${stats['withAudio']}',
+                    ),
+                  ],
                 ),
               ),
             ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
           // Lista de tarjetas
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
                 : _filteredCards.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.speaker_notes_off,
-                              size: 64,
-                              color: Colors.grey[400],
+                              Icons.speaker_notes_off_rounded,
+                              size: 80,
+                              color: colorScheme.outlineVariant,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
                             Text(
                               _searchQuery.isEmpty
                                   ? 'No hay tarjetas guardadas'
                                   : 'No se encontraron resultados',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                             if (_searchQuery.isEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Selecciona texto en tus libros para crear tarjetas',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 40),
+                                child: Text(
+                                  'Selecciona texto en tus libros para crear tarjetas y repasar vocabulario.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                    height: 1.5,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ],
                           ],
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         itemCount: _filteredCards.length,
                         itemBuilder: (context, index) {
                           final card = _filteredCards[index];
@@ -311,22 +315,31 @@ class _StatItem extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(icon, size: 24, color: Theme.of(context).primaryColor),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          children: [
+            Icon(icon, size: 16, color: colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onSurfaceVariant,
+            letterSpacing: 0.5,
           ),
         ),
       ],
@@ -349,127 +362,205 @@ class _CardTile extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          child: Text(
-            card.word[0].toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.bold),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(0.2),
         ),
-        title: Text(
-          card.word,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+      ),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          leading: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Center(
+              child: Text(
+                card.word.isNotEmpty ? card.word[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           ),
-        ),
-        subtitle: Text(
-          card.definition,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.grey[700]),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+          title: Text(
+            card.word,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              card.definition,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.volume_up_rounded, size: 22, color: colorScheme.primary),
+                tooltip: 'Reproducir palabra',
+                onPressed: onPlayWord,
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.primary.withOpacity(0.1),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
+          ),
           children: [
-            IconButton(
-              icon: const Icon(Icons.volume_up, size: 20),
-              tooltip: 'Reproducir palabra',
-              onPressed: onPlayWord,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, size: 20),
-              tooltip: 'Eliminar',
-              color: Colors.red,
-              onPressed: onDelete,
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+            const Divider(height: 24),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Definición completa
-                const Text(
-                  'Definición:',
+                _buildSectionTitle(context, 'Definición'),
+                const SizedBox(height: 6),
+                Text(
+                  card.definition,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 15,
+                    height: 1.4,
+                    color: colorScheme.onSurface.withOpacity(0.9),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(card.definition),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
                 
                 // Contexto/Oración
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Contexto:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const Spacer(),
+                    _buildSectionTitle(context, 'Contexto'),
                     IconButton(
-                      icon: const Icon(Icons.play_circle, size: 20),
-                      tooltip: 'Reproducir oración',
                       onPressed: onPlaySentence,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  card.contexto,
-                  style: const TextStyle(fontStyle: FontStyle.italic),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Fuente
-                Row(
-                  children: [
-                    const Icon(Icons.book, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        card.fuente,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      tooltip: 'Escuchar contexto',
+                      style: IconButton.styleFrom(
+                        backgroundColor: colorScheme.secondaryContainer.withOpacity(0.3),
+                        foregroundColor: colorScheme.secondary,
+                        padding: const EdgeInsets.all(8),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    card.contexto,
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
                 
-                const SizedBox(height: 4),
+                const SizedBox(height: 20),
                 
-                // Fecha
+                // Footer (Fuente y Acciones)
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(card.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.book_rounded, size: 14, color: colorScheme.primary.withOpacity(0.7)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  card.fuente,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary.withOpacity(0.7)),
+                              const SizedBox(width: 6),
+                              Text(
+                                _formatDate(card.createdAt),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      tooltip: 'Eliminar tarjeta',
+                      style: IconButton.styleFrom(
+                        foregroundColor: colorScheme.onSurfaceVariant,
+                        backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        padding: const EdgeInsets.all(8),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+        color: Theme.of(context).colorScheme.primary,
       ),
     );
   }
