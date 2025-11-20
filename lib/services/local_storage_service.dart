@@ -72,6 +72,12 @@ class LocalStorageService {
     return await saveBooks(books);
   }
 
+  /// Elimina el progreso de lectura de un libro
+  Future<void> deleteProgress(String bookId) async {
+    await _prefs.remove('$_progressPrefix$bookId');
+    await _prefs.remove('scroll_offset_$bookId');
+  }
+
   /// Guarda el progreso de lectura de un libro
   Future<bool> saveProgress(String bookId, int currentPage) async {
     return await _prefs.setInt('$_progressPrefix$bookId', currentPage);

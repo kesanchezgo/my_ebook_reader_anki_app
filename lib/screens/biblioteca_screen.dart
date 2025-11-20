@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/local_storage_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
 import '../bloc/biblioteca_state.dart';
@@ -251,6 +252,8 @@ class BibliotecaScreen extends StatelessWidget {
                   if (deleteData) {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('reading_time_${book.id}');
+                    
+                    // Eliminar posiciones de scroll por capítulo
                     for (int i = 0; i < 1000; i++) {
                       if (prefs.containsKey('scroll_${book.id}_$i')) {
                         await prefs.remove('scroll_${book.id}_$i');
@@ -258,6 +261,10 @@ class BibliotecaScreen extends StatelessWidget {
                         if (i > 50) break; 
                       }
                     }
+
+                    // Eliminar progreso de lectura (capítulo actual)
+                    final storageService = await LocalStorageService.init();
+                    await storageService.deleteProgress(book.id);
                   }
                   
                   if (context.mounted) {
