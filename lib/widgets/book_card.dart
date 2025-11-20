@@ -34,6 +34,19 @@ class _BookCardState extends State<BookCard> {
     _loadReadingTime();
   }
 
+  @override
+  void didUpdateWidget(BookCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recargar tiempo si el libro cambia o si se reconstruye el widget (ej. al volver del lector)
+    if (widget.book.id != oldWidget.book.id || widget.book != oldWidget.book) {
+       _coverFuture = EpubService().getCoverImage(File(widget.book.filePath));
+       _loadReadingTime();
+    } else {
+      // Incluso si es el mismo libro, forzamos recarga del tiempo por si cambió en segundo plano
+      _loadReadingTime();
+    }
+  }
+
   Future<void> _loadReadingTime() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
@@ -133,20 +146,8 @@ class _BookCardState extends State<BookCard> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
                         ],
-                        if (widget.book.progress > 0) ...[
-                          Icon(Icons.pie_chart_outline_rounded, size: 12, color: theme.colorScheme.primary.withOpacity(0.7)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${widget.book.progress.toInt()}%',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                        // El porcentaje ya se muestra en el badge de la portada
                       ],
                     ),
                   ],

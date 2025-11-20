@@ -163,13 +163,17 @@ class BibliotecaScreen extends StatelessWidget {
   }
 
   /// Navega a la pantalla del lector
-  void _openBook(BuildContext context, Book book) {
-    Navigator.push(
+  void _openBook(BuildContext context, Book book) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => LectorScreen(book: book),
       ),
     );
+    // Al volver del lector, refrescamos la biblioteca para actualizar tiempos de lectura y progreso
+    if (context.mounted) {
+      context.read<BibliotecaBloc>().add(LoadBooks());
+    }
   }
 
   /// Elimina un libro de la biblioteca

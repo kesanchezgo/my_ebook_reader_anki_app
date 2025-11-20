@@ -43,11 +43,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   
   // Reading Stats
   Timer? _readingTimer;
-  int _readingSeconds = 0;
+  int _sessionSeconds = 0; // Tiempo de la sesión actual (empieza en 0)
+  int _accumulatedSeconds = 0; // Tiempo total acumulado histórico
   
   // Progress
   double _globalProgress = 0.0;
   double _chapterProgress = 0.0;
+  final Map<int, double> _chaptersProgressMap = {};
 
   @override
   void initState() {
@@ -94,7 +96,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       
       // Cargar tiempo de lectura acumulado (simulado por ahora o desde prefs)
       final prefs = await SharedPreferences.getInstance();
-      _readingSeconds = prefs.getInt('reading_time_${widget.book.id}') ?? 0;
+      _accumulatedSeconds = prefs.getInt('reading_time_${widget.book.id}') ?? 0;
+      // _sessionSeconds empieza en 0 por defecto
 
       if (mounted) {
         setState(() {
@@ -132,10 +135,10 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   void _startReadingTimer() {
     _readingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        _readingSeconds++;
+        _sessionSeconds++;
       });
       // Guardar cada minuto para no saturar
-      if (_readingSeconds % 60 == 0) {
+      if (_sessionSeconds % 60 == 0) {
         _saveReadingTime();
       }
     });
@@ -143,7 +146,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   
   Future<void> _saveReadingTime() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('reading_time_${widget.book.id}', _readingSeconds);
+    // Guardamos el total (acumulado histórico + sesión actual)
+    await prefs.setInt('reading_time_${widget.book.id}', _accumulatedSeconds + _sessionSeconds);
   }
 
   void _toggleControls() {
@@ -153,7 +157,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   }
 
   String _formatReadingTime() {
-    final duration = Duration(seconds: _readingSeconds);
+    // Mostramos solo el tiempo de la sesión actual
+    final duration = Duration(seconds: _sessionSeconds);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     if (hours > 0) {
@@ -450,7 +455,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   onPageChanged: (index) {
                     setState(() {
                       _currentChapterIndex = index;
-                      // No reseteamos _globalProgress aquí, se actualizará con el scroll del nuevo capítulo
+                      // Recuperar el progreso del nuevo capítulo si ya existe en el mapa
+                      _chapterProgress = _chaptersProgressMap[index] ?? 0.0;
+                      
+                      // Recalcular progreso global basado en el nuevo capítulo
+                      final totalChapters = chapters.length;
+                      if (totalChapters > 0) {
+                        _globalProgress = (index + _chapterProgress) / totalChapters;
+                      }
                     });
                     _saveProgress(index);
                   },
@@ -467,31 +479,30 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         setState(() => _currentSelection = selection);
                       },
                       onProgressChanged: (chapterProgress) {
-                        // Actualizar progreso del capítulo local
-                        if ((chapterProgress - _chapterProgress).abs() > 0.001) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() => _chapterProgress = chapterProgress);
-                          });
-                        }
+                        // Guardar en el mapa siempre para tenerlo listo al cambiar de página
+                        _chaptersProgressMap[index] = chapterProgress;
 
-                        // Calcular progreso global: (capítulo actual + progreso del capítulo) / total capítulos
-                        final totalChapters = chapters.length;
-                        if (totalChapters > 0) {
-                          final globalProgress = (index + chapterProgress) / totalChapters;
-                          
-                          // Actualizar solo si hay cambio significativo
-                          if ((globalProgress - _globalProgress).abs() > 0.001) {
+                        // Solo actualizar la UI si es el capítulo actual
+                        if (index == _currentChapterIndex) {
+                          if ((chapterProgress - _chapterProgress).abs() > 0.001) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) {
-                                setState(() => _globalProgress = globalProgress);
-                                // Guardar progreso global periódicamente o al salir, 
-                                // pero aquí actualizamos el estado para la UI.
-                                // Para persistencia, lo hacemos en _saveProgress o al salir.
-                                // Sin embargo, _saveProgress solo se llama al cambiar de capítulo.
-                                // Deberíamos actualizar el libro también si el progreso dentro del capítulo cambia mucho?
-                                // Mejor no saturar el Bloc. Lo guardamos al pausar/salir.
-                              }
+                              if (mounted) setState(() => _chapterProgress = chapterProgress);
                             });
+                          }
+
+                          // Calcular progreso global: (capítulo actual + progreso del capítulo) / total capítulos
+                          final totalChapters = chapters.length;
+                          if (totalChapters > 0) {
+                            final globalProgress = (index + chapterProgress) / totalChapters;
+                            
+                            // Actualizar solo si hay cambio significativo
+                            if ((globalProgress - _globalProgress).abs() > 0.001) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  setState(() => _globalProgress = globalProgress);
+                                }
+                              });
+                            }
                           }
                         }
                       },
@@ -576,9 +587,15 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           minHeight: 2,
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Capítulo: ${(_chapterProgress * 100).toInt()}%',
-                          style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, fontSize: 10),
+                        FutureBuilder<List<ChapterData>>(
+                          future: _chaptersFuture,
+                          builder: (context, snapshot) {
+                            final totalChapters = snapshot.data?.length ?? 0;
+                            return Text(
+                              'Capítulo ${_currentChapterIndex + 1} de $totalChapters • ${(_chapterProgress * 100).toInt()}%',
+                              style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, fontSize: 10),
+                            );
+                          }
                         ),
                       ],
                     ),
@@ -636,85 +653,98 @@ class _ChapterView extends StatefulWidget {
 class _ChapterViewState extends State<_ChapterView> {
   late ScrollController _scrollController;
   Timer? _scrollSaveTimer;
+  bool _isLoading = true; // Estado de carga para evitar saltos visuales
+  double _savedOffset = 0.0;
 
   @override
   void initState() {
     super.initState();
     
-    // 1. Obtener offset guardado de forma síncrona
+    // 1. Obtener offset guardado
     final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
-    final savedOffset = SettingsService.instance.getDouble(key) ?? 0.0;
+    _savedOffset = SettingsService.instance.getDouble(key) ?? 0.0;
     
-    // 2. Inicializar controller con el offset
-    _scrollController = ScrollController(initialScrollOffset: savedOffset);
+    // 2. Inicializar controller
+    _scrollController = ScrollController(initialScrollOffset: _savedOffset);
     _scrollController.addListener(_onScroll);
     
-    // 3. Intentar restaurar posición después de renderizado
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && savedOffset > 0) {
-        // Si el contenido cargó y es más pequeño que el offset guardado, 
-        // el controller lo habrá clampeado. Intentamos saltar de nuevo si creció.
-        // Pero HtmlWidget puede tardar.
-        // Una opción es reintentar un par de veces.
-        if (_scrollController.position.maxScrollExtent < savedOffset) {
-           // El contenido aún no carga completo.
-           // No podemos hacer mucho más que esperar eventos de layout.
-           // Pero HtmlWidget no notifica.
-        } else {
-           // Si ya cabe, nos aseguramos (aunque initialScrollOffset debió funcionar)
-           _scrollController.jumpTo(savedOffset);
-        }
+    // 3. Timeout de seguridad para quitar el loading si tarda mucho
+    Timer(const Duration(milliseconds: 800), () {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+        _onScroll(); // Intentar actualizar progreso una última vez
       }
-      _onScroll();
+    });
+
+    // 4. Verificar carga inicial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkScrollRestoration();
     });
   }
 
   @override
   void dispose() {
     _scrollSaveTimer?.cancel();
-    // Guardar posición al salir
     _saveScrollPosition();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    // Calcular progreso
-    if (_scrollController.hasClients) {
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.offset;
-      
-      double progress = 0.0;
-      if (maxScroll > 10) { // Ignorar si el contenido es muy pequeño (carga inicial)
-        progress = currentScroll / maxScroll;
-      } else {
-        // Si el contenido es muy pequeño, probablemente está cargando o es vacío.
-        // Mantenemos 0.0 para no mostrar 100% falsamente.
-        // A menos que realmente sea un capítulo de una línea, pero es raro.
-        progress = 0.0;
+  void _checkScrollRestoration() {
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    
+    // Si ya tenemos contenido suficiente para restaurar la posición
+    if (maxScroll >= _savedOffset) {
+      if (_savedOffset > 0) {
+        _scrollController.jumpTo(_savedOffset);
       }
       
-      // Asegurar rango 0.0 - 1.0
-      progress = progress.clamp(0.0, 1.0);
+      if (_isLoading) {
+        setState(() => _isLoading = false);
+      }
       
-      widget.onProgressChanged(progress);
-    }
-
-    // Debounce save
-    if (_scrollSaveTimer?.isActive ?? false) _scrollSaveTimer!.cancel();
-    // Solo guardar si maxScroll > 0 para evitar sobrescribir con 0 al inicio
-    if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
-       _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
+      // Forzar actualización de progreso
+      _updateProgress();
+    } else {
+      // Si el contenido aún es pequeño (cargando imágenes/fuentes), esperamos
+      // El NotificationListener llamará a _onScroll/_checkScrollRestoration
     }
   }
 
+  void _onScroll() {
+    if (_isLoading) {
+      _checkScrollRestoration();
+    } else {
+      _updateProgress();
+      
+      // Debounce save
+      if (_scrollSaveTimer?.isActive ?? false) _scrollSaveTimer!.cancel();
+      if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
+         _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
+      }
+    }
+  }
+
+  void _updateProgress() {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    
+    double progress = 0.0;
+    if (maxScroll > 10) { 
+      progress = currentScroll / maxScroll;
+    }
+    
+    progress = progress.clamp(0.0, 1.0);
+    widget.onProgressChanged(progress);
+  }
+
   Future<void> _saveScrollPosition() async {
-    // No verificamos mounted aquí porque queremos que se guarde incluso si el widget se está desmontando
-    // Usamos SettingsService para guardar (ahora expone métodos)
     final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
-    // Si el controller ya fue disposed, no podemos leer offset.
-    // Pero _saveScrollPosition se llama desde dispose ANTES de disposear el controller.
     try {
       if (_scrollController.hasClients) {
         await SettingsService.instance.setDouble(key, _scrollController.offset);
@@ -750,43 +780,79 @@ class _ChapterViewState extends State<_ChapterView> {
           buttonItems: buttonItems,
         );
       },
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.only(
-          left: 24.0, 
-          right: 24.0, 
-          top: 100.0, // Espacio para AppBar (kToolbarHeight + Status + Padding)
-          bottom: 100.0 // Espacio para Footer
-        ),
-        child: HtmlWidget(
-          widget.chapter.htmlContent,
-          // Key para forzar rebuild si cambia alineación o fuente
-          key: ValueKey('html_${widget.chapterIndex}_${widget.textAlign}_${widget.fontFamily}_${widget.fontSize}'),
-          textStyle: GoogleFonts.getFont(
-            widget.fontFamily,
-            fontSize: widget.fontSize,
-            color: widget.textColor,
-            height: 1.6,
+      child: Stack(
+        children: [
+          // Contenido con opacidad animada
+          AnimatedOpacity(
+            opacity: _isLoading ? 0.0 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (metrics) {
+                if (_isLoading) {
+                   _checkScrollRestoration();
+                }
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.only(
+                  left: 24.0, 
+                  right: 24.0, 
+                  top: 100.0, 
+                  bottom: 100.0 
+                ),
+                child: HtmlWidget(
+                  widget.chapter.htmlContent,
+                  key: ValueKey('html_${widget.chapterIndex}_${widget.textAlign}_${widget.fontFamily}_${widget.fontSize}'),
+                  textStyle: GoogleFonts.getFont(
+                    widget.fontFamily,
+                    fontSize: widget.fontSize,
+                    color: widget.textColor,
+                    height: 1.6,
+                  ),
+                  customStylesBuilder: (element) {
+                    if (element.localName == 'p' || element.localName == 'div') {
+                      return {
+                        'text-align': widget.textAlign == TextAlign.justify ? 'justify !important' : 'left !important',
+                      };
+                    }
+                    return null;
+                  },
+                  onTapUrl: (url) async {
+                     if (url.contains('#')) {
+                       PremiumToast.show(context, 'Nota al pie: Navegación en desarrollo');
+                       return true; 
+                     }
+                     return false; 
+                  },
+                ),
+              ),
+            ),
           ),
-          customStylesBuilder: (element) {
-            if (element.localName == 'p' || element.localName == 'div') {
-              return {
-                'text-align': widget.textAlign == TextAlign.justify ? 'justify !important' : 'left !important',
-              };
-            }
-            return null;
-          },
-          onTapUrl: (url) async {
-             // Manejo de notas al pie y anclas
-             if (url.contains('#')) {
-               // TODO: Implementar navegación real a notas (requiere parsing complejo de IDs)
-               // Por ahora, evitamos el crash y notificamos al usuario
-               PremiumToast.show(context, 'Nota al pie: Navegación en desarrollo');
-               return true; // Consumir el evento para evitar abrir navegador
-             }
-             return false; // Dejar pasar enlaces externos normales
-          },
-        ),
+          
+          // Indicador de carga elegante
+          if (_isLoading)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Cargando capítulo...',
+                    style: TextStyle(
+                      color: widget.textColor.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
