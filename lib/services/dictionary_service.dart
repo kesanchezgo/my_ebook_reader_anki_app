@@ -314,8 +314,33 @@ class DictionaryService {
     }
   }
 
-  /// Explica un contexto usando Gemini AI
+  /// Explica un contexto usando IA (Gemini o Perplexity según prioridad)
   Future<Map<String, dynamic>?> explainContext(String context) async {
+    final priorities = SettingsService.instance.contextPriority;
+
+    for (final source in priorities) {
+      Map<String, dynamic>? result;
+      
+      switch (source) {
+        case 'gemini':
+          result = await _explainContextGemini(context);
+          break;
+        case 'perplexity':
+          result = await _explainContextPerplexity(context);
+          break;
+      }
+
+      if (result != null) {
+        // Añadir la fuente al resultado para mostrar en UI
+        result['source'] = source == 'gemini' ? 'Gemini AI' : 'Perplexity AI';
+        return result;
+      }
+    }
+    
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _explainContextGemini(String context) async {
     final apiKey = SettingsService.instance.geminiApiKey;
     if (apiKey.isEmpty) return null;
 
@@ -383,6 +408,112 @@ Texto a analizar: "$context"
       print('📡 Error: No hay conexión a internet o el servidor no es accesible.');
     } catch (e) {
       print('Error consultando Gemini para explicación: $e');
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _explainContextPerplexity(String context) async {
+    final apiKey = SettingsService.instance.perplexityApiKey.trim();
+    if (apiKey.isEmpty) return null;
+
+    // Debug: Mostrar primeros caracteres para verificar que la key se lee bien
+    final maskedKey = apiKey.length > 10 ? '${apiKey.substring(0, 8)}...' : '***';
+    print('🧠 Explicando contexto con Perplexity AI (Key: $maskedKey)...');
+
+    try {
+      final url = Uri.parse('https://api.perplexity.ai/chat/completions');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "model": "sonar-pro",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres un tutor de español que ayuda a estudiantes a comprender textos complejos mediante análisis didáctico."
+            },
+            {
+              "role": "user",
+              "content": "Analiza el siguiente texto en español: \"$context\""
+            }
+          ],
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "main_idea": {
+                    "type": "string",
+                    "description": "Explicación clara y concisa de la idea principal del texto (máximo 2 frases)."
+                  },
+                  "complex_terms": {
+                    "type": "array",
+                    "description": "Lista de palabras o frases difíciles del texto con sus explicaciones.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "term": {
+                          "type": "string",
+                          "description": "Palabra o frase difícil extraída del texto."
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "description": "Significado sencillo de la palabra o frase en este contexto específico."
+                        }
+                      },
+                      "required": ["term", "explanation"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "usage_examples": {
+                    "type": "array",
+                    "description": "Ejemplos de uso similar o frases reescritas de forma más sencilla para facilitar la comprensión.",
+                    "items": {
+                      "type": "string",
+                      "description": "Un ejemplo de uso similar o una frase del texto reescrita de forma más sencilla."
+                    }
+                  },
+                  "cultural_note": {
+                    "type": ["string", "null"],
+                    "description": "Opcional: Si hay alguna referencia cultural, idiomática o tono específico (irónico, formal, etc.), menciónalo aquí. Si no hay ninguna referencia cultural relevante, devuelve null."
+                  }
+                },
+                "required": ["main_idea", "complex_terms", "usage_examples", "cultural_note"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "max_tokens": 1000,
+          "temperature": 0.2
+        }),
+      ).timeout(const Duration(seconds: 40));
+
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['choices'] != null && (data['choices'] as List).isNotEmpty) {
+          final content = data['choices'][0]['message']['content'];
+          if (content != null) {
+            try {
+              // Perplexity devuelve el JSON como string dentro de content
+              return jsonDecode(content) as Map<String, dynamic>;
+            } catch (e) {
+              print('Error parsing JSON from Perplexity: $e');
+            }
+          }
+        }
+      } else {
+        print('Error Perplexity API: ${response.statusCode} - ${response.body}');
+      }
+    } on TimeoutException catch (_) {
+      print('⏱️ Error: La solicitud a Perplexity excedió el tiempo de espera (40s).');
+    } catch (e) {
+      print('Error consultando Perplexity para explicación: $e');
     }
     return null;
   }

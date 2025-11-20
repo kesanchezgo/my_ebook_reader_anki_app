@@ -62,6 +62,10 @@ class SettingsScreen extends StatelessWidget {
           _buildDictionarySection(context),
           
           const SizedBox(height: 32),
+
+          _buildContextSection(context),
+          
+          const SizedBox(height: 32),
           
           _buildSectionHeader(context, 'Información'),
           const SizedBox(height: 16),
@@ -214,9 +218,123 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildContextSection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Explicación de Contexto',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Configura las fuentes de IA para explicar el contexto de las oraciones.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Perplexity API Key
+          TextField(
+            controller: TextEditingController(text: SettingsService.instance.perplexityApiKey),
+            onChanged: (value) => SettingsService.instance.setPerplexityApiKey(value),
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Perplexity API Key',
+              hintText: 'pplx-...',
+              prefixIcon: Icon(Icons.psychology_rounded, color: colorScheme.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colorScheme.outline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colorScheme.outlineVariant),
+              ),
+              filled: true,
+              fillColor: colorScheme.surface,
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          Text(
+            'Prioridad de Explicación',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Arrastra para reordenar qué IA consultar primero.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildContextPriorityList(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContextPriorityList(BuildContext context) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        final priorities = SettingsService.instance.contextPriority;
+        
+        return ReorderableListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          onReorder: (oldIndex, newIndex) {
+            setState(() {
+              if (oldIndex < newIndex) {
+                newIndex -= 1;
+              }
+              final newPriorities = List<String>.from(priorities);
+              final item = newPriorities.removeAt(oldIndex);
+              newPriorities.insert(newIndex, item);
+              
+              SettingsService.instance.setContextPriority(newPriorities);
+            });
+          },
+          children: [
+            for (final source in priorities)
+              ListTile(
+                key: ValueKey(source),
+                leading: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                title: Text(_getSourceName(source)),
+                trailing: Icon(_getSourceIcon(source), color: Theme.of(context).colorScheme.primary),
+                tileColor: Theme.of(context).colorScheme.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   String _getSourceName(String source) {
     switch (source) {
       case 'gemini': return 'Gemini AI (Google)';
+      case 'perplexity': return 'Perplexity AI';
       case 'local': return 'Diccionario Local (Offline)';
       case 'web': return 'Web (FreeDictionaryAPI)';
       default: return source;
@@ -226,6 +344,7 @@ class SettingsScreen extends StatelessWidget {
   IconData _getSourceIcon(String source) {
     switch (source) {
       case 'gemini': return Icons.auto_awesome_rounded;
+      case 'perplexity': return Icons.psychology_rounded;
       case 'local': return Icons.sd_storage_rounded;
       case 'web': return Icons.public_rounded;
       default: return Icons.help_outline_rounded;

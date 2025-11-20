@@ -19,7 +19,9 @@ class SettingsService {
   static const String _keyThemeId = 'theme_id';
   static const String _keyTextAlign = 'text_align';
   static const String _keyGeminiApiKey = 'gemini_api_key';
+  static const String _keyPerplexityApiKey = 'perplexity_api_key';
   static const String _keyDictionaryPriority = 'dictionary_priority';
+  static const String _keyContextPriority = 'context_priority';
 
   // Defaults
   static const String _defaultFontFamily = 'Merriweather';
@@ -27,7 +29,9 @@ class SettingsService {
   static const String _defaultThemeId = AppTheme.darkPremium;
   static const String _defaultTextAlign = 'justify';
   static const String _defaultGeminiApiKey = '';
+  static const String _defaultPerplexityApiKey = '';
   static const List<String> _defaultDictionaryPriority = ['gemini', 'local', 'web'];
+  static const List<String> _defaultContextPriority = ['gemini', 'perplexity'];
 
   // Current State
   String _fontFamily = _defaultFontFamily;
@@ -35,7 +39,9 @@ class SettingsService {
   String _themeId = _defaultThemeId;
   String _textAlign = _defaultTextAlign;
   String _geminiApiKey = _defaultGeminiApiKey;
+  String _perplexityApiKey = _defaultPerplexityApiKey;
   List<String> _dictionaryPriority = _defaultDictionaryPriority;
+  List<String> _contextPriority = _defaultContextPriority;
 
   // Getters
   String get fontFamily => _fontFamily;
@@ -43,7 +49,9 @@ class SettingsService {
   String get themeId => _themeId;
   String get textAlign => _textAlign;
   String get geminiApiKey => _geminiApiKey;
+  String get perplexityApiKey => _perplexityApiKey;
   List<String> get dictionaryPriority => _dictionaryPriority;
+  List<String> get contextPriority => _contextPriority;
 
   // Themes Definition (Delegated to AppTheme)
   Map<String, AppTheme> get appThemes => AppTheme.themes;
@@ -70,7 +78,9 @@ class SettingsService {
     _themeId = _prefs!.getString(_keyThemeId) ?? _defaultThemeId;
     _textAlign = _prefs!.getString(_keyTextAlign) ?? _defaultTextAlign;
     _geminiApiKey = _prefs!.getString(_keyGeminiApiKey) ?? _defaultGeminiApiKey;
+    _perplexityApiKey = _prefs!.getString(_keyPerplexityApiKey) ?? _defaultPerplexityApiKey;
     _dictionaryPriority = _prefs!.getStringList(_keyDictionaryPriority) ?? _defaultDictionaryPriority;
+    _contextPriority = _prefs!.getStringList(_keyContextPriority) ?? _defaultContextPriority;
     
     // Update notifier
     themeNotifier.value = _themeId;
@@ -114,11 +124,25 @@ class SettingsService {
     await _prefs!.setString(_keyGeminiApiKey, value);
   }
 
+  /// Guarda la API Key de Perplexity
+  Future<void> setPerplexityApiKey(String value) async {
+    _perplexityApiKey = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_keyPerplexityApiKey, value);
+  }
+
   /// Guarda la prioridad de diccionarios
   Future<void> setDictionaryPriority(List<String> value) async {
     _dictionaryPriority = value;
     _prefs ??= await SharedPreferences.getInstance();
     await _prefs!.setStringList(_keyDictionaryPriority, value);
+  }
+
+  /// Guarda la prioridad de contexto
+  Future<void> setContextPriority(List<String> value) async {
+    _contextPriority = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setStringList(_keyContextPriority, value);
   }
 
   /// Restaura los valores por defecto
@@ -128,6 +152,8 @@ class SettingsService {
     await setThemeId(_defaultThemeId);
     await setTextAlign(_defaultTextAlign);
     await setGeminiApiKey(_defaultGeminiApiKey);
+    await setPerplexityApiKey(_defaultPerplexityApiKey);
     await setDictionaryPriority(_defaultDictionaryPriority);
+    await setContextPriority(_defaultContextPriority);
   }
 }
