@@ -276,130 +276,220 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   void _showSettingsModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      isScrollControlled: true, // Permite que el modal ocupe más espacio si es necesario
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final textTheme = theme.textTheme;
+
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 24.0,
-                  right: 24.0,
-                  top: 24.0,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Configuración de Lectura',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+            return Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                left: 24,
+                right: 24,
+                top: 12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.tune_rounded, color: colorScheme.primary, size: 28),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Ajustes',
+                            style: textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
                           ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await SettingsService.instance.resetToDefaults();
+                          _loadSettings();
+                          setState(() {});
+                          setModalState(() {});
+                        },
+                        icon: Icon(Icons.refresh_rounded, size: 18, color: colorScheme.primary),
+                        label: Text(
+                          'Restaurar', 
+                          style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)
                         ),
-                        TextButton(
-                          onPressed: () async {
-                            await SettingsService.instance.resetToDefaults();
-                            _loadSettings();
-                            setState(() {});
-                            setModalState(() {});
-                          },
-                          child: Text('Restaurar', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          backgroundColor: colorScheme.primaryContainer.withOpacity(0.3),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // Tamaño de fuente
+                  Text(
+                    'Tamaño de texto',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Aa', style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant)),
+                            Text('${_fontSize.toInt()}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary)),
+                            Text('Aa', style: TextStyle(fontSize: 24, color: colorScheme.onSurfaceVariant)),
+                          ],
+                        ),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: colorScheme.primary,
+                            inactiveTrackColor: colorScheme.onSurfaceVariant.withOpacity(0.2),
+                            thumbColor: colorScheme.primary,
+                            overlayColor: colorScheme.primary.withOpacity(0.1),
+                            trackHeight: 4,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                          ),
+                          child: Slider(
+                            value: _fontSize,
+                            min: 14.0,
+                            max: 32.0,
+                            divisions: 18,
+                            onChanged: (value) {
+                              setModalState(() => _fontSize = value);
+                              setState(() => _fontSize = value);
+                              SettingsService.instance.setFontSize(value);
+                            },
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // Tamaño de fuente
-                    Text('Tamaño de fuente: ${_fontSize.toInt()}', 
-                      style: const TextStyle(color: Colors.grey)),
-                    Slider(
-                      value: _fontSize,
-                      min: 14.0,
-                      max: 32.0,
-                      divisions: 18,
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      inactiveColor: Colors.grey[800],
-                      onChanged: (value) {
-                        setModalState(() => _fontSize = value);
-                        setState(() => _fontSize = value);
-                        SettingsService.instance.setFontSize(value);
-                      },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Tipo de fuente
+                  Text(
+                    'Tipografía',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
                     ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Tipo de fuente
-                    const Text('Tipo de fuente', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[800]!),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _fontFamily,
-                          isExpanded: true,
-                          dropdownColor: Colors.grey[900],
-                          style: const TextStyle(color: Colors.white),
-                          items: ['Merriweather', 'Lato', 'Lora', 'Roboto Mono']
-                              .map((font) => DropdownMenuItem(
-                                    value: font,
-                                    child: Text(font),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setModalState(() => _fontFamily = value);
-                              setState(() => _fontFamily = value);
-                              SettingsService.instance.setFontFamily(value);
-                            }
-                          },
-                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _fontFamily,
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: colorScheme.primary),
+                        dropdownColor: colorScheme.surfaceContainerHighest,
+                        style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+                        items: ['Merriweather', 'Lato', 'Lora', 'Roboto Mono']
+                            .map((font) => DropdownMenuItem(
+                                  value: font,
+                                  child: Text(
+                                    font,
+                                    style: GoogleFonts.getFont(font),
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setModalState(() => _fontFamily = value);
+                            setState(() => _fontFamily = value);
+                            SettingsService.instance.setFontFamily(value);
+                          }
+                        },
                       ),
                     ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Alineación
-                    const Text('Alineación', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Row(
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Alineación
+                  Text(
+                    'Alineación',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
                       children: [
                         Expanded(
                           child: _buildAlignButton(
                             'Justificado', 
                             TextAlign.justify, 
-                            setModalState
+                            Icons.format_align_justify_rounded,
+                            setModalState,
+                            colorScheme,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: _buildAlignButton(
                             'Izquierda', 
                             TextAlign.left, 
-                            setModalState
+                            Icons.format_align_left_rounded,
+                            setModalState,
+                            colorScheme,
                           ),
                         ),
                       ],
                     ),
-                    
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                ],
               ),
             );
           },
@@ -408,32 +498,44 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     );
   }
   
-  Widget _buildAlignButton(String label, TextAlign align, StateSetter setModalState) {
+  Widget _buildAlignButton(
+    String label, 
+    TextAlign align, 
+    IconData icon,
+    StateSetter setModalState,
+    ColorScheme colorScheme,
+  ) {
     final isSelected = _textAlign == align;
-    final primaryColor = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: () {
         setModalState(() => _textAlign = align);
         setState(() => _textAlign = align);
         SettingsService.instance.setTextAlign(align == TextAlign.justify ? 'justify' : 'left');
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.2) : Colors.grey[900],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? primaryColor : Colors.grey[800]!,
-          ),
+          color: isSelected ? colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? primaryColor : Colors.grey,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon, 
+              size: 18, 
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant
             ),
-          ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

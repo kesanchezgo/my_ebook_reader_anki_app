@@ -56,19 +56,9 @@ class BibliotecaScreen extends StatelessWidget {
       body: BlocConsumer<BibliotecaBloc, BibliotecaState>(
         listener: (context, state) {
           if (state is BibliotecaError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
+            PremiumToast.show(context, state.message, isError: true);
           } else if (state is BibliotecaBookImported) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Libro "${state.book.title}" importado con éxito'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            PremiumToast.show(context, 'Libro "${state.book.title}" importado', isSuccess: true);
           }
         },
         builder: (context, state) {

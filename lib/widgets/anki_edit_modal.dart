@@ -75,17 +75,20 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
       if (mounted) {
         setState(() {
           _isSearching = false;
-          if (definition.isNotEmpty) {
+          // Si la definición es válida y no es el mensaje de error por defecto
+          if (definition.isNotEmpty && definition != 'Definición no encontrada') {
             _definitionController.text = definition;
-            PremiumToast.show(context, 'Definición encontrada', isSuccess: true);
+            // No mostramos toast si se encuentra, para una experiencia más limpia
           } else {
-            PremiumToast.show(context, 'No se encontró. Ingrésala manual');
+            // No rellenamos el campo con texto de error, lo dejamos vacío para que el usuario escriba
+            PremiumToast.show(context, 'Definición no encontrada', isWarning: true);
           }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSearching = false);
+        PremiumToast.show(context, 'Error en la búsqueda', isError: true);
       }
     }
   }
@@ -262,6 +265,8 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
               child: FilledButton(
                 onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
                 style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -281,6 +286,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
                       style: textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
+                        color: colorScheme.onPrimary, // Forzar color para contraste
                       ),
                     ),
               ),
