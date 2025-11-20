@@ -430,7 +430,7 @@ Texto a analizar: "$context"
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          "model": "sonar-pro",
+          "model": "sonar",
           "messages": [
             {
               "role": "system",
