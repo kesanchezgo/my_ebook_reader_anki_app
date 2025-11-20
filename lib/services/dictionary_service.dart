@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'local_dictionary_service.dart';
 import 'settings_service.dart';
@@ -310,5 +312,78 @@ class DictionaryService {
       print('Error al buscar definición detallada: $e');
       return null;
     }
+  }
+
+  /// Explica un contexto usando Gemini AI
+  Future<Map<String, dynamic>?> explainContext(String context) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('🤖 Explicando contexto con Gemini AI...');
+    try {
+      // Usamos gemini-1.5-flash que es la versión estable y rápida actual.
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": """
+Analiza el siguiente texto en español y genera una explicación didáctica en formato JSON.
+El objetivo es ayudar a un estudiante a comprender el contexto, el vocabulario y el sentido del texto.
+
+Devuelve SOLO un objeto JSON con esta estructura exacta:
+{
+  "main_idea": "Explicación clara y concisa de la idea principal del texto (máx 2 frases).",
+  "complex_terms": [
+    {
+      "term": "Palabra o frase difícil",
+      "explanation": "Significado sencillo en este contexto."
+    }
+  ],
+  "usage_examples": [
+    "Un ejemplo de uso similar o una frase reescrita de forma más sencilla."
+  ],
+  "cultural_note": "Opcional: Si hay alguna referencia cultural, idiomática o tono específico (irónico, formal, etc.), menciónalo aquí. Si no, null."
+}
+
+Texto a analizar: "$context"
+"""
+            }]
+          }]
+        }),
+      ).timeout(const Duration(seconds: 40));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              // Limpiar markdown si existe (```json ... ```)
+              final cleanJson = text.replaceAll(RegExp(r'```json|```'), '').trim();
+              try {
+                return jsonDecode(cleanJson) as Map<String, dynamic>;
+              } catch (e) {
+                print('Error parsing JSON from Gemini: $e');
+              }
+            }
+          }
+        }
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } on TimeoutException catch (_) {
+      print('⏱️ Error: La solicitud a Gemini excedió el tiempo de espera (40s). Verifica tu conexión.');
+    } on SocketException catch (_) {
+      print('📡 Error: No hay conexión a internet o el servidor no es accesible.');
+    } catch (e) {
+      print('Error consultando Gemini para explicación: $e');
+    }
+    return null;
   }
 }

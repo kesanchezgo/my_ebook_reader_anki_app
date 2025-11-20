@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/anki_card.dart';
 import '../services/anki_database_service.dart';
+import '../services/dictionary_service.dart';
 import '../services/export_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/premium_toast.dart';
@@ -18,6 +19,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   final AnkiDatabaseService _databaseService = AnkiDatabaseService();
   final ExportService _exportService = ExportService();
   final TtsService _ttsService = TtsService();
+  final DictionaryService _dictionaryService = DictionaryService(); // Added service
   
   List<AnkiCard> _cards = [];
   bool _isLoading = true;
@@ -141,6 +143,381 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     } else {
       _ttsService.speakSentence(text);
     }
+  }
+
+  Future<void> _explainContext(String contextText) async {
+    // Mostrar loading
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: 300,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Analizando contexto con IA...',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final explanation = await _dictionaryService.explainContext(contextText);
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Cerrar loading
+
+      if (explanation != null) {
+        _showExplanationModal(explanation, contextText);
+      } else {
+        PremiumToast.show(context, 'No se pudo obtener la explicación. Verifica tu conexión.', isWarning: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        PremiumToast.show(context, 'Error de conexión', isError: true);
+      }
+    }
+  }
+
+  void _showExplanationModal(Map<String, dynamic> data, String originalContext) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: false, // Evita que se cierre al deslizar hacia abajo accidentalmente
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.0, // Permite cerrar al deslizar hasta el fondo
+        maxChildSize: 0.95,
+        snap: true,
+        snapSizes: const [0.4], // Punto de anclaje "minimizado"
+        builder: (_, controller) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxHeight < 100) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                );
+              }
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: Column(
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Análisis de Contexto',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Cerrar',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.only(bottom: 32),
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    // Contexto Original
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CONTEXTO ORIGINAL',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            originalContext,
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.6,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Serif', // Si está disponible, o usa el default
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Idea Principal
+                    _buildInfoCard(
+                      context,
+                      title: 'Idea Principal',
+                      icon: Icons.lightbulb_outline_rounded,
+                      content: Text(
+                        data['main_idea'] ?? '',
+                        style: TextStyle(
+                          fontSize: 16,
+                          height: 1.5,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Términos Complejos
+                    if (data['complex_terms'] != null && (data['complex_terms'] as List).isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: Text(
+                          'VOCABULARIO CLAVE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      ...(data['complex_terms'] as List).map((term) => Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).shadowColor.withOpacity(0.05),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              term['term'] ?? '',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              term['explanation'] ?? '',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Ejemplos
+                    if (data['usage_examples'] != null && (data['usage_examples'] as List).isNotEmpty) ...[
+                      _buildInfoCard(
+                        context,
+                        title: 'Ejemplos de Uso',
+                        icon: Icons.format_quote_rounded,
+                        content: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: (data['usage_examples'] as List).map((ex) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Icon(Icons.circle, size: 6, color: Theme.of(context).colorScheme.primary),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    ex.toString(),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontStyle: FontStyle.italic,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )).toList(),
+                        ),
+                      ),
+                    ],
+
+                    // Nota Cultural (si existe)
+                    if (data['cultural_note'] != null) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 22),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'NOTA CULTURAL',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber[800],
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    data['cultural_note'],
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+            }
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, {required String title, required IconData icon, required Widget content}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 10),
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          content,
+        ],
+      ),
+    );
   }
   
   @override
@@ -292,6 +669,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                             onDelete: () => _deleteCard(card),
                             onPlayWord: () => _playAudio(card.word, isWord: true),
                             onPlaySentence: () => _playAudio(card.contexto, isWord: false),
+                            onExplainContext: () => _explainContext(card.contexto),
                           );
                         },
                       ),
@@ -352,12 +730,14 @@ class _CardTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onPlayWord;
   final VoidCallback onPlaySentence;
+  final VoidCallback onExplainContext;
   
   const _CardTile({
     required this.card,
     required this.onDelete,
     required this.onPlayWord,
     required this.onPlaySentence,
+    required this.onExplainContext,
   });
   
   @override
@@ -481,7 +861,23 @@ class _CardTile extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildSectionTitle(context, 'Contexto'),
+                    Row(
+                      children: [
+                        _buildSectionTitle(context, 'Contexto'),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: onExplainContext,
+                          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                          tooltip: 'Explicar con IA',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          style: IconButton.styleFrom(
+                            foregroundColor: colorScheme.primary,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
+                    ),
                     IconButton(
                       onPressed: onPlaySentence,
                       icon: const Icon(Icons.play_arrow_rounded, size: 20),
