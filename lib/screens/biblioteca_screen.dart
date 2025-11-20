@@ -164,15 +164,21 @@ class BibliotecaScreen extends StatelessWidget {
 
   /// Navega a la pantalla del lector
   void _openBook(BuildContext context, Book book) async {
-    await Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => LectorScreen(book: book),
       ),
     );
-    // Al volver del lector, refrescamos la biblioteca para actualizar tiempos de lectura y progreso
+    
     if (context.mounted) {
-      context.read<BibliotecaBloc>().add(LoadBooks());
+      if (result is Book) {
+        // Si recibimos el libro actualizado, actualizamos directamente
+        context.read<BibliotecaBloc>().add(UpdateBook(result));
+      } else {
+        // Fallback por si acaso
+        context.read<BibliotecaBloc>().add(LoadBooks());
+      }
     }
   }
 

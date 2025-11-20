@@ -50,6 +50,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   double _globalProgress = 0.0;
   double _chapterProgress = 0.0;
   final Map<int, double> _chaptersProgressMap = {};
+  bool _canPop = false;
 
   @override
   void initState() {
@@ -57,6 +58,10 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _chaptersFuture = EpubService().loadChapters(File(widget.book.filePath));
     _loadSettings();
+    
+    // Inicializar progreso global desde el libro para evitar reinicios a 0
+    _globalProgress = widget.book.progressPercentage / 100.0;
+    
     _loadProgress();
     _startReadingTimer();
   }
@@ -69,13 +74,30 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     }
   }
 
+  Book _getCurrentBookState() {
+    return widget.book.copyWith(
+      currentPage: _currentChapterIndex,
+      progressPercentage: _globalProgress * 100,
+    );
+  }
+
+  void _handleExit() {
+    setState(() => _canPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final updatedBook = _getCurrentBookState();
+        Navigator.pop(context, updatedBook);
+      }
+    });
+  }
+
   void _saveCurrentProgress() {
-    if (mounted) {
-      final updatedBook = widget.book.copyWith(
-        currentPage: _currentChapterIndex,
-        progressPercentage: _globalProgress * 100,
-      );
+    // Intentar guardar incluso si está desmontando, siempre que el contexto sea válido
+    try {
+      final updatedBook = _getCurrentBookState();
       context.read<BibliotecaBloc>().add(UpdateBook(updatedBook));
+    } catch (e) {
+      debugPrint('Error saving progress: $e');
     }
   }
 
@@ -429,8 +451,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _backgroundColor,
+    return PopScope(
+      canPop: _canPop,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleExit();
+      },
+      child: Scaffold(
+        backgroundColor: _backgroundColor,
       body: Stack(
         children: [
           // Contenido Principal
@@ -617,6 +645,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           ),
         ],
       ),
+    ),
     );
   }
 }

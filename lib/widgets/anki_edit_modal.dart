@@ -150,164 +150,190 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-    final surfaceColor = theme.colorScheme.surface;
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
-    // UI limpia y oscura
     return Container(
-      color: surfaceColor,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 24,
         right: 24,
-        top: 24,
+        top: 12,
       ),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Guardar en Anki',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                if (_isSearching)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Header
+            Row(
+              children: [
+                Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'Crear Tarjeta Anki',
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
             
+            // Warning Card
             if (_cardExists)
               Container(
-                padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  border: Border.all(color: Colors.red.withOpacity(0.5)),
-                  borderRadius: BorderRadius.circular(8),
+                  color: colorScheme.errorContainer.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colorScheme.error.withOpacity(0.2)),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 20),
-                    SizedBox(width: 12),
+                    Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Esta palabra ya existe en tu colección.',
-                        style: TextStyle(color: Colors.red),
+                        'Esta palabra ya está en tu colección.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-            TextFormField(
+            // Word Input
+            _buildModernTextField(
               controller: _wordController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Palabra',
-                labelStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-                errorStyle: const TextStyle(color: Colors.redAccent),
-                filled: true,
-                fillColor: Colors.black12,
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Requerido';
-                return null;
-              },
+              label: 'Palabra',
+              icon: Icons.translate_rounded,
+              theme: theme,
             ),
             const SizedBox(height: 16),
             
-            Stack(
-              children: [
-                TextFormField(
-                  controller: _definitionController,
-                  style: const TextStyle(color: Colors.white),
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Definición',
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-                    errorStyle: const TextStyle(color: Colors.redAccent),
-                    filled: true,
-                    fillColor: Colors.black12,
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Requerido';
-                    return null;
-                  },
-                ),
-                if (_isSearching)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(primaryColor.withOpacity(0.5)),
-                      minHeight: 2,
-                    ),
-                  ),
-              ],
+            // Definition Input
+            _buildModernTextField(
+              controller: _definitionController,
+              label: 'Definición',
+              icon: Icons.menu_book_rounded,
+              theme: theme,
+              maxLines: 3,
+              isLoading: _isSearching,
             ),
             const SizedBox(height: 16),
 
-            TextFormField(
+            // Context Input
+            _buildModernTextField(
               controller: _contextController,
-              style: const TextStyle(color: Colors.white),
+              label: 'Contexto',
+              icon: Icons.format_quote_rounded,
+              theme: theme,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Contexto',
-                labelStyle: TextStyle(color: Colors.grey),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-                errorStyle: TextStyle(color: Colors.redAccent),
-                filled: true,
-                fillColor: Colors.black12,
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Requerido';
-                return null;
-              },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             
+            // Action Button
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  disabledBackgroundColor: Colors.grey[800],
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              height: 56,
+              child: FilledButton(
+                onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
                 child: _isLoading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(
-                      'GUARDAR', 
-                      style: TextStyle(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.bold,
-                        color: (_cardExists || !_isFormValid) ? Colors.grey[500] : Colors.white
+                  ? SizedBox(
+                      height: 24, 
+                      width: 24, 
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5, 
+                        color: colorScheme.onPrimary
                       )
+                    )
+                  : Text(
+                      'GUARDAR TARJETA', 
+                      style: textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
               ),
             ),
-            const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required ThemeData theme,
+    int maxLines = 1,
+    bool isLoading = false,
+  }) {
+    final colorScheme = theme.colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: colorScheme.onSurface,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          prefixIcon: Icon(icon, color: colorScheme.primary.withOpacity(0.7)),
+          suffixIcon: isLoading 
+            ? Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary)
+                ),
+              )
+            : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
+        ),
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) return ''; // Validación visual manejada por el botón
+          return null;
+        },
       ),
     );
   }
