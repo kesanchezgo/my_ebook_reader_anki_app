@@ -4,6 +4,7 @@ class AnkiCard {
   final String word; // Palabra o frase clave
   final String definition; // Definición (se llenará manualmente o con API)
   final String contexto; // Contexto/oración donde apareció
+  final String example; // Ejemplo de uso (API o manual)
   final String? audioPath; // Ruta del audio TTS (opcional)
   final String bookId; // ID del libro de donde proviene
   final String fuente; // Título del libro o fuente
@@ -16,6 +17,7 @@ class AnkiCard {
     required this.word,
     required this.definition,
     required this.contexto,
+    this.example = '',
     this.audioPath,
     required this.bookId,
     required this.fuente,
@@ -31,6 +33,7 @@ class AnkiCard {
       word: json['word'] as String,
       definition: json['definition'] as String,
       contexto: json['contexto'] as String,
+      example: json['example'] as String? ?? '',
       audioPath: json['audioPath'] as String?,
       bookId: json['bookId'] as String,
       fuente: json['fuente'] as String,
@@ -49,6 +52,7 @@ class AnkiCard {
       'word': word,
       'definition': definition,
       'contexto': contexto,
+      'example': example,
       'audioPath': audioPath,
       'bookId': bookId,
       'fuente': fuente,
@@ -64,6 +68,7 @@ class AnkiCard {
     String? word,
     String? definition,
     String? contexto,
+    String? example,
     String? audioPath,
     String? bookId,
     String? fuente,
@@ -76,6 +81,7 @@ class AnkiCard {
       word: word ?? this.word,
       definition: definition ?? this.definition,
       contexto: contexto ?? this.contexto,
+      example: example ?? this.example,
       audioPath: audioPath ?? this.audioPath,
       bookId: bookId ?? this.bookId,
       fuente: fuente ?? this.fuente,

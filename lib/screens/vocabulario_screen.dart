@@ -452,6 +452,29 @@ class _CardTile extends StatelessWidget {
                   ),
                 ),
                 
+                if (card.example.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionTitle(context, 'Ejemplo'),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.tertiaryContainer.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colorScheme.tertiary.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      card.example,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+                
                 const SizedBox(height: 20),
                 
                 // Contexto/Oración

@@ -5,9 +5,14 @@ import 'settings_service.dart';
 
 class DictionaryResult {
   final String definition;
+  final String? example;
   final String source; // 'Gemini AI', 'Diccionario Local', 'Web (FreeDictionary)', etc.
 
-  DictionaryResult({required this.definition, required this.source});
+  DictionaryResult({
+    required this.definition, 
+    this.example,
+    required this.source,
+  });
 }
 
 /// Servicio para consultar diccionarios (Local, Web, Gemini)
@@ -36,6 +41,7 @@ class DictionaryService {
             if (definitions.isNotEmpty) {
               return DictionaryResult(
                 definition: definitions[0]['definition'] as String,
+                example: definitions[0]['example'] as String?,
                 source: 'Web (English)',
               );
             }
@@ -65,6 +71,7 @@ class DictionaryService {
             if (definitions.isNotEmpty) {
               return DictionaryResult(
                 definition: definitions[0]['definition'] as String,
+                example: definitions[0]['example'] as String?,
                 source: 'Web (Español)',
               );
             }
@@ -121,6 +128,7 @@ class DictionaryService {
         print('✅ Encontrado en diccionario local');
         return DictionaryResult(
           definition: localResult['definition'] ?? localResult['translation'],
+          example: localResult['examples'],
           source: 'Diccionario Local',
         );
       }
@@ -181,7 +189,7 @@ class DictionaryService {
         body: jsonEncode({
           "contents": [{
             "parts": [{
-              "text": "Define brevemente la palabra '$word' en español. Si tiene múltiples acepciones, da la más común. Máximo 40 palabras."
+              "text": "Define la palabra '$word' en español con estilo de diccionario. La definición debe tener entre 10 y 25 palabras, ser objetiva y precisa. Luego incluye un ejemplo de uso de entre 8 y 15 palabras. Responde SOLO con un objeto JSON con las claves 'definition' y 'example'."
             }]
           }]
         }),
@@ -195,10 +203,23 @@ class DictionaryService {
             final parts = content['parts'] as List;
             if (parts.isNotEmpty) {
               final text = parts[0]['text'] as String;
-              return DictionaryResult(
-                definition: text.trim(),
-                source: 'Gemini AI',
-              );
+              // Limpiar markdown si existe (```json ... ```)
+              final cleanJson = text.replaceAll(RegExp(r'```json|```'), '').trim();
+              
+              try {
+                final jsonResponse = jsonDecode(cleanJson);
+                return DictionaryResult(
+                  definition: jsonResponse['definition'] ?? text,
+                  example: jsonResponse['example'],
+                  source: 'Gemini AI',
+                );
+              } catch (e) {
+                // Fallback si no es JSON válido
+                return DictionaryResult(
+                  definition: text.trim(),
+                  source: 'Gemini AI',
+                );
+              }
             }
           }
         }

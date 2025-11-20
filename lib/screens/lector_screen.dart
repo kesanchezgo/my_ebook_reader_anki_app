@@ -264,10 +264,23 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     
     // 3. Limpieza Final
     String extracted = fullText.substring(start, end).trim();
+
+    // Eliminar marcadores de cita tipo [1], [2]
+    extracted = extracted.replaceAll(RegExp(r'\[\d+\]'), '').trim();
     
-    // Eliminar puntuación "suelta" al inicio (comas, puntos y coma)
-    while (extracted.isNotEmpty && RegExp(r'^[,;]').hasMatch(extracted)) {
+    // Eliminar puntuación "suelta" y guiones al inicio
+    while (extracted.isNotEmpty && (
+        RegExp(r'^[,;]').hasMatch(extracted) || 
+        extracted.startsWith('―') || 
+        extracted.startsWith('—') || 
+        extracted.startsWith('-')
+      )) {
       extracted = extracted.substring(1).trim();
+    }
+
+    // Eliminar guiones al final que puedan haber quedado colgando
+    while (extracted.isNotEmpty && (extracted.endsWith('―') || extracted.endsWith('—') || extracted.endsWith('-'))) {
+      extracted = extracted.substring(0, extracted.length - 1).trim();
     }
     
     return extracted;

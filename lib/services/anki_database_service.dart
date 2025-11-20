@@ -5,7 +5,7 @@ import '../models/anki_card.dart';
 /// Servicio para gestionar la base de datos SQLite de tarjetas Anki
 class AnkiDatabaseService {
   static const String _databaseName = 'anki_cards.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
   static const String _tableName = 'anki_cards';
 
   Database? _database;
@@ -38,6 +38,7 @@ class AnkiDatabaseService {
         word TEXT NOT NULL,
         definition TEXT NOT NULL,
         contexto TEXT NOT NULL,
+        example TEXT DEFAULT "",
         fuente TEXT NOT NULL,
         audioPath TEXT,
         bookId TEXT NOT NULL,
@@ -68,6 +69,14 @@ class AnkiDatabaseService {
         // No se realiza UPDATE porque las columnas 'sentence' y 'bookTitle' no existen en el esquema actual.
       } catch (e) {
         // Si falla (ej. columnas ya existen), ignorar
+      }
+    }
+    
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE $_tableName ADD COLUMN example TEXT DEFAULT ""');
+      } catch (e) {
+        print('Error adding example column: $e');
       }
     }
   }

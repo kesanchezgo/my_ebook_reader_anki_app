@@ -29,6 +29,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
   late TextEditingController _wordController;
   late TextEditingController _definitionController;
   late TextEditingController _contextController;
+  late TextEditingController _exampleController;
   
   final AnkiDatabaseService _ankiDatabase = AnkiDatabaseService();
   final DictionaryService _dictionaryService = DictionaryService();
@@ -46,6 +47,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
     _wordController = TextEditingController(text: widget.word);
     _contextController = TextEditingController(text: widget.context);
     _definitionController = TextEditingController();
+    _exampleController = TextEditingController();
     
     // Listeners para validación
     _wordController.addListener(_validateForm);
@@ -82,6 +84,9 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
           // Si la definición es válida y no es el mensaje de error por defecto
           if (result.definition.isNotEmpty && !result.definition.contains('no encontrada')) {
             _definitionController.text = result.definition;
+            if (result.example != null && result.example!.isNotEmpty) {
+              _exampleController.text = result.example!;
+            }
             _definitionSource = result.source;
             // No mostramos toast si se encuentra, para una experiencia más limpia
           } else {
@@ -124,6 +129,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
         word: _wordController.text,
         definition: _definitionController.text,
         contexto: _contextController.text,
+        example: _exampleController.text,
         audioPath: audioPath,
         fuente: widget.bookTitle,
         createdAt: DateTime.now(),
@@ -152,6 +158,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
     _wordController.dispose();
     _definitionController.dispose();
     _contextController.dispose();
+    _exampleController.dispose();
     super.dispose();
   }
 
@@ -172,150 +179,163 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
         right: 24,
         top: 12,
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Header
-            Row(
-              children: [
-                Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
-                const SizedBox(width: 12),
-                Text(
-                  'Crear Tarjeta Anki',
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            
-            // Warning Card
-            if (_cardExists)
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colorScheme.error.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Esta palabra ya está en tu colección.',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.w500,
+              ),
+              const SizedBox(height: 24),
+  
+              // Header
+              Row(
+                children: [
+                  Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Crear Tarjeta Anki',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Warning Card
+              if (_cardExists)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.error.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Esta palabra ya está en tu colección.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Word Input
-            _buildModernTextField(
-              controller: _wordController,
-              label: 'Palabra',
-              icon: Icons.translate_rounded,
-              theme: theme,
-            ),
-            const SizedBox(height: 16),
-            
-            // Definition Source Chip
-            if (_definitionSource != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Fuente: $_definitionSource',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Definition Input
-            _buildModernTextField(
-              controller: _definitionController,
-              label: 'Definición',
-              icon: Icons.menu_book_rounded,
-              theme: theme,
-              maxLines: 3,
-              isLoading: _isSearching,
-            ),
-            const SizedBox(height: 16),
-
-            // Context Input
-            _buildModernTextField(
-              controller: _contextController,
-              label: 'Contexto',
-              icon: Icons.format_quote_rounded,
-              theme: theme,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 32),
-            
-            // Action Button
-            SizedBox(
-              height: 56,
-              child: FilledButton(
-                onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    ],
                   ),
-                  elevation: 0,
                 ),
-                child: _isLoading 
-                  ? SizedBox(
-                      height: 24, 
-                      width: 24, 
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5, 
-                        color: colorScheme.onPrimary
-                      )
-                    )
-                  : Text(
-                      'GUARDAR TARJETA', 
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        color: colorScheme.onPrimary, // Forzar color para contraste
-                      ),
-                    ),
+  
+              // Word Input
+              _buildModernTextField(
+                controller: _wordController,
+                label: 'Palabra',
+                icon: Icons.translate_rounded,
+                theme: theme,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              
+              // Definition Source Chip
+              if (_definitionSource != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8, left: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Fuente: $_definitionSource',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+  
+              // Definition Input
+              _buildModernTextField(
+                controller: _definitionController,
+                label: 'Definición',
+                icon: Icons.menu_book_rounded,
+                theme: theme,
+                maxLines: 3,
+                isLoading: _isSearching,
+              ),
+              const SizedBox(height: 16),
+  
+              // Example Input (Optional)
+              _buildModernTextField(
+                controller: _exampleController,
+                label: 'Ejemplo (Opcional)',
+                icon: Icons.lightbulb_outline_rounded,
+                theme: theme,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+  
+              // Context Input
+              _buildModernTextField(
+                controller: _contextController,
+                label: 'Contexto',
+                icon: Icons.format_quote_rounded,
+                theme: theme,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 32),
+              
+              // Action Button
+              SizedBox(
+                height: 56,
+                child: FilledButton(
+                  onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading 
+                    ? SizedBox(
+                        height: 24, 
+                        width: 24, 
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5, 
+                          color: colorScheme.onPrimary
+                        )
+                      )
+                    : Text(
+                        'GUARDAR TARJETA', 
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                          color: colorScheme.onPrimary, // Forzar color para contraste
+                        ),
+                      ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
