@@ -4,53 +4,171 @@ enum ContextMode {
 }
 
 class ContextService {
-  /// Extrae el contexto (oración o párrafo) alrededor de una palabra seleccionada.
-  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, double? scrollPercentage}) {
+  String extractContext({
+    required String word,
+    required String fullText,
+    ContextMode mode = ContextMode.sentence,
+    double? scrollPercentage,
+  }) {
     if (word.isEmpty || fullText.isEmpty) return "";
 
+    // 🔍 DEBUG: Imprimir información
+    print("=== DEBUG CONTEXT SERVICE ===");
+    print("Palabra buscada: '$word'");
+    print("Longitud texto completo: ${fullText.length}");
+    print("ScrollPercentage recibido: $scrollPercentage");
+    
     final escapedWord = RegExp.escape(word);
-    final matches = RegExp(r'\b' + escapedWord + r'\b', caseSensitive: false).allMatches(fullText);
+    final List<RegExpMatch> matches = RegExp(
+      r'\b' + escapedWord + r'\b',
+      caseSensitive: false,
+    ).allMatches(fullText).toList();
 
-    if (matches.isEmpty) return "";
+    print("Total de coincidencias encontradas: ${matches.length}");
+    
+    if (matches.isEmpty) {
+      print("❌ No se encontraron coincidencias");
+      return "";
+    }
+
+    // Imprimir todas las posiciones
+    for (int i = 0; i < matches.length && i < 10; i++) {
+      final m = matches[i];
+      final context = fullText.substring(
+        (m.start - 30).clamp(0, fullText.length),
+        (m.end + 30).clamp(0, fullText.length)
+      ).replaceAll('\n', ' ');
+      print("Match $i: posición ${m.start} - \"...$context...\"");
+    }
 
     RegExpMatch bestMatch = matches.first;
 
     if (scrollPercentage != null) {
-      // CLAMP: Asegurar rango válido 0.0 - 1.0
       final clampedScroll = scrollPercentage.clamp(0.0, 1.0);
+      final docLength = fullText.length;
+      final centerPos = (docLength * clampedScroll).round();
       
-      // LÓGICA GEOGRÁFICA: Convertir scroll a posición de caracter
-      // Si el texto tiene 1000 chars y scroll es 50%, buscamos cerca del char 500.
-      final int targetCharIndex = (fullText.length * clampedScroll).round();
+      print("\n📍 Posición estimada del scroll: $centerPos");
+      print("Texto en esa posición: \"${fullText.substring((centerPos-20).clamp(0, fullText.length), (centerPos+20).clamp(0, fullText.length)).replaceAll('\n', ' ')}\"");
 
-      // Buscar el vecino más cercano por distancia de caracteres
-      int minDistance = (matches.first.start - targetCharIndex).abs();
+      final windowSize = (docLength * 0.10).round();
+      final windowStart = (centerPos - windowSize).clamp(0, docLength);
+      final windowEnd = (centerPos + windowSize).clamp(0, docLength);
+      
+      print("Ventana de búsqueda: [$windowStart - $windowEnd] (tamaño: ${windowSize * 2})");
 
-      for (final match in matches) {
-        final distance = (match.start - targetCharIndex).abs();
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          bestMatch = match;
-        } else {
-          // Optimización: Como los matches están ordenados, si la distancia empieza a crecer,
-          // ya nos alejamos del punto óptimo y podemos detener el bucle.
-          // (Opcional, pero mejora rendimiento en palabras muy frecuentes)
-          // break; 
+      final matchesInWindow = matches
+          .where((match) => match.start >= windowStart && match.start <= windowEnd)
+          .toList();
+      
+      print("Matches dentro de ventana: ${matchesInWindow.length}");
+
+      if (matchesInWindow.isEmpty) {
+        print("⚠️ No hay matches en ventana, usando el más cercano");
+        bestMatch = _findClosestMatch(matches, centerPos);
+        print("Match seleccionado (fallback): posición ${bestMatch.start}");
+      } else {
+        RegExpMatch? selectedMatch;
+        double bestScore = double.infinity;
+
+        for (final match in matchesInWindow) {
+          final distance = (match.start - centerPos).abs().toDouble();
+          final score = match.start >= centerPos ? distance * 0.7 : distance * 1.0;
+          final direction = match.start >= centerPos ? "adelante" : "atrás";
+          
+          print("  Evaluando pos ${match.start}: distancia=$distance, score=$score ($direction)");
+          
+          if (score < bestScore) {
+            bestScore = score;
+            selectedMatch = match;
+          }
         }
+
+        bestMatch = selectedMatch ?? matches.first;
+        print("✅ Match seleccionado: posición ${bestMatch.start} (score: $bestScore)");
+      }
+    } else {
+      print("⚠️ scrollPercentage es NULL, usando primer match");
+    }
+
+    final result = _expandBoundaries(fullText, bestMatch.start, bestMatch.end, mode);
+    print("📝 Contexto extraído: \"$result\"");
+    print("=== FIN DEBUG ===\n");
+    
+    return result;
+  }
+
+
+  /// Encuentra el mejor match usando ventana de búsqueda y scoring con sesgo adelante
+  RegExpMatch _findMatchByScrollImproved({
+    required String fullText,
+    required List<RegExpMatch> matches,
+    required double scrollPercentage,
+  }) {
+    final clampedScroll = scrollPercentage.clamp(0.0, 1.0);
+    final docLength = fullText.length;
+    final centerPos = (docLength * clampedScroll).round();
+
+    // Definir ventana de búsqueda (±10% del documento)
+    final windowSize = (docLength * 0.10).round();
+    final windowStart = (centerPos - windowSize).clamp(0, docLength);
+    final windowEnd = (centerPos + windowSize).clamp(0, docLength);
+
+    // Filtrar matches dentro de la ventana
+    final matchesInWindow = matches
+        .where((match) => match.start >= windowStart && match.start <= windowEnd)
+        .toList();
+
+    if (matchesInWindow.isEmpty) {
+      // Fallback: buscar el más cercano de todos
+      return _findClosestMatch(matches, centerPos);
+    }
+
+    // De los matches en la ventana, elegir usando scoring con sesgo adelante
+    RegExpMatch? bestMatch;
+    double bestScore = double.infinity;
+
+    for (final match in matchesInWindow) {
+      final distance = (match.start - centerPos).abs().toDouble();
+
+      // Sesgo hacia adelante: 30% de descuento para matches futuros
+      final score = match.start >= centerPos
+          ? distance * 0.7 // Matches adelante son preferidos
+          : distance * 1.0; // Matches atrás sin descuento
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestMatch = match;
       }
     }
 
-    return _expandBoundaries(fullText, bestMatch.start, bestMatch.end, mode);
+    return bestMatch ?? matches.first;
   }
 
-  String _expandBoundaries(String fullText, int wordIndex, int wordEnd, ContextMode mode) {
-    // 2. Definir delimitadores según el modo
+  /// Busca el match más cercano a una posición (fallback)
+  RegExpMatch _findClosestMatch(List<RegExpMatch> matches, int targetPosition) {
+    RegExpMatch closest = matches.first;
+    double minDistance = (matches.first.start - targetPosition).abs().toDouble();
+
+    for (final match in matches) {
+      final distance = (match.start - targetPosition).abs().toDouble();
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = match;
+      }
+    }
+
+    return closest;
+  }
+
+  String _expandBoundaries(
+      String fullText, int wordIndex, int wordEnd, ContextMode mode) {
+    // Definir delimitadores según el modo
     final RegExp delimiters = mode == ContextMode.sentence
         ? RegExp(r'[.?!。！？\n]') // Fin de oración
-        : RegExp(r'[\n\r]');     // Fin de párrafo
+        : RegExp(r'[\n\r]'); // Fin de párrafo
 
-    // 3. Expandir hacia la izquierda
+    // Expandir hacia la izquierda
     int start = wordIndex;
     while (start > 0) {
       final char = fullText[start - 1];
@@ -60,21 +178,21 @@ class ContextService {
       start--;
     }
 
-    // 4. Expandir hacia la derecha
+    // Expandir hacia la derecha
     int end = wordEnd;
     while (end < fullText.length) {
       final char = fullText[end];
       if (delimiters.hasMatch(char)) {
-        // Incluimos el delimitador si es puntuación, pero no si es salto de línea
+        // Incluir puntuación pero no saltos de línea
         if (mode == ContextMode.sentence && char != '\n') {
-          end++; 
+          end++;
         }
         break;
       }
       end++;
     }
 
-    // 5. Extraer y limpiar
+    // Extraer y limpiar
     String extracted = fullText.substring(start, end);
     return _cleanText(extracted);
   }
@@ -86,7 +204,7 @@ class ContextService {
     // Eliminar referencias tipo [1], [12]
     cleaned = cleaned.replaceAll(RegExp(r'\[\d+\]'), '');
 
-    // Reemplazar saltos de línea y tabulaciones por espacios simples
+    // Reemplazar saltos de línea y tabulaciones por espacios
     cleaned = cleaned.replaceAll(RegExp(r'[\n\r\t]'), ' ');
 
     // Eliminar espacios múltiples
@@ -95,14 +213,9 @@ class ContextService {
     // Eliminar espacios al inicio y final
     cleaned = cleaned.trim();
 
-    // Eliminar puntuación "suelta" o guiones al inicio que hayan quedado por el corte
-    // Ej: "- Hola" -> "Hola" (opcional, según preferencia, aquí lo dejamos limpio)
-    // while (cleaned.isNotEmpty && (cleaned.startsWith('-') || cleaned.startsWith('—') || cleaned.startsWith('―'))) {
-    //   cleaned = cleaned.substring(1).trim();
-    // }
-
-    // Nueva regex para quitar : , ; al final
+    // Eliminar puntuación final suelta
     cleaned = cleaned.replaceAll(RegExp(r'[:;,]+$'), '');
+
     return cleaned.trim();
   }
 }

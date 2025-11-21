@@ -582,8 +582,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           // Modo normal: extracción automática usando ContextService
                           // TODO: Permitir configurar ContextMode desde ajustes del libro
                           initialContext = _contextService.extractContext(
-                            _currentSelection, 
-                            chapters[index].plainText,
+                            word: _currentSelection, 
+                            fullText: chapters[index].plainText,
                             mode: ContextMode.paragraph,
                             scrollPercentage: scrollPercentage
                           );
@@ -921,32 +921,65 @@ class _ChapterViewState extends State<_ChapterView> {
             onPressed: () {
               editableTextState.hideToolbar();
               
-              // CÁLCULO DE PRECISIÓN BASADO EN TOQUE
+              // CÁLCULO MEJORADO DE POSICIÓN
               double currentProgress = 0.0;
               if (_scrollController.hasClients) {
-                 try {
-                   final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
-                   // Si el ancla es nula (raro), usamos el centro como fallback
-                   final touchY = anchor.dy;
-                   
-                   final scrollOffset = _scrollController.offset;
-                   final maxScroll = _scrollController.position.maxScrollExtent;
-                   final viewportHeight = _scrollController.position.viewportDimension;
-                   final totalContentHeight = maxScroll + viewportHeight;
-
-                   // Posición absoluta del clic en todo el documento
-                   final absolutePixelPosition = scrollOffset + touchY;
-                   
-                   if (totalContentHeight > 0) {
-                     currentProgress = absolutePixelPosition / totalContentHeight;
-                   }
-                 } catch (e) {
-                   debugPrint("Error calculando posición exacta: $e");
-                 }
+                try {
+                  final scrollOffset = _scrollController.offset;
+                  final maxScroll = _scrollController.position.maxScrollExtent;
+                  final viewportHeight = _scrollController.position.viewportDimension;
+                  
+                  // Intentar obtener la posición del toque
+                  double touchYRelative = 0.5; // Default: centro del viewport
+                  try {
+                    final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
+                    touchYRelative = anchor.dy / viewportHeight; // Normalizado 0-1 dentro del viewport
+                  } catch (e) {
+                    debugPrint("No se pudo obtener anchor, usando centro");
+                  }
+                  
+                  // CÁLCULO HÍBRIDO MEJORADO
+                  double scrollProgress = 0.0;
+                  double viewportSize = 0.0;
+                  double touchOffset = 0.0;
+                  
+                  if (maxScroll > 0) {
+                    // 1. Posición base del scroll
+                    scrollProgress = scrollOffset / maxScroll;
+                    
+                    // 2. Ajuste fino basado en la posición del toque dentro del viewport
+                    viewportSize = viewportHeight / (maxScroll + viewportHeight);
+                    touchOffset = touchYRelative * viewportSize;
+                    
+                    // 3. Combinar ambos
+                    currentProgress = scrollProgress + touchOffset;
+                  } else {
+                    // Documento corto que cabe en una pantalla
+                    currentProgress = touchYRelative;
+                  }
+                  
+                  currentProgress = currentProgress.clamp(0.0, 1.0);
+                  
+                  // DEBUG (temporal - eliminar después de probar)
+                  debugPrint("=== DEBUG POSICIÓN ===");
+                  debugPrint("Scroll: ${scrollOffset.toInt()}/${maxScroll.toInt()}");
+                  debugPrint("ScrollProgress: ${(scrollProgress * 100).toInt()}%");
+                  debugPrint("TouchY relativo: ${(touchYRelative * 100).toInt()}%");
+                  debugPrint("Progress final: ${(currentProgress * 100).toInt()}%");
+                  debugPrint("=====================");
+                  
+                } catch (e) {
+                  debugPrint("Error calculando posición: $e");
+                  // Fallback: usar scroll básico
+                  if (_scrollController.position.maxScrollExtent > 0) {
+                    currentProgress = _scrollController.offset / 
+                                    _scrollController.position.maxScrollExtent;
+                  }
+                }
               }
-              // Clamp y envío
-              currentProgress = currentProgress.clamp(0.0, 1.0);
+
               widget.onSaveToStudy(currentProgress);
+
             },
             label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
           ),
