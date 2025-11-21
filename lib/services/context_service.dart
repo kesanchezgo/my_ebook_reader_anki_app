@@ -5,32 +5,40 @@ enum ContextMode {
 
 class ContextService {
   /// Extrae el contexto (oración o párrafo) alrededor de una palabra seleccionada.
-  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, double scrollPercentage = 0.0}) {
+  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, double? scrollPercentage}) {
     if (word.isEmpty || fullText.isEmpty) return "";
 
-    // Escapar y buscar todas las ocurrencias
     final escapedWord = RegExp.escape(word);
     final matches = RegExp(r'\b' + escapedWord + r'\b', caseSensitive: false).allMatches(fullText);
 
     if (matches.isEmpty) return "";
 
-    RegExpMatch bestMatch;
+    RegExpMatch bestMatch = matches.first;
 
-    if (scrollPercentage > 0 && matches.length > 1) {
-      // ESTRATEGIA DE OCURRENCIA PROPORCIONAL
-      // Si la palabra aparece 10 veces y estamos al 50% del scroll, 
-      // elegimos la 5ta ocurrencia. Esto ignora la densidad de caracteres HTML.
-      
-      // Clamp para asegurar que el porcentaje esté entre 0.0 y 1.0
+    if (scrollPercentage != null) {
+      // CLAMP: Asegurar rango válido 0.0 - 1.0
       final clampedScroll = scrollPercentage.clamp(0.0, 1.0);
       
-      // Calcular índice en la lista de matches
-      int targetIndex = ((matches.length - 1) * clampedScroll).round();
-      
-      bestMatch = matches.elementAt(targetIndex);
-    } else {
-      // Fallback: Primera coincidencia
-      bestMatch = matches.first;
+      // LÓGICA GEOGRÁFICA: Convertir scroll a posición de caracter
+      // Si el texto tiene 1000 chars y scroll es 50%, buscamos cerca del char 500.
+      final int targetCharIndex = (fullText.length * clampedScroll).round();
+
+      // Buscar el vecino más cercano por distancia de caracteres
+      int minDistance = (matches.first.start - targetCharIndex).abs();
+
+      for (final match in matches) {
+        final distance = (match.start - targetCharIndex).abs();
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          bestMatch = match;
+        } else {
+          // Optimización: Como los matches están ordenados, si la distancia empieza a crecer,
+          // ya nos alejamos del punto óptimo y podemos detener el bucle.
+          // (Opcional, pero mejora rendimiento en palabras muy frecuentes)
+          // break; 
+        }
+      }
     }
 
     return _expandBoundaries(fullText, bestMatch.start, bestMatch.end, mode);
