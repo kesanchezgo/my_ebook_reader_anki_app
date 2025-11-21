@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
           final appTheme = AppTheme.getTheme(themeId);
           
           return MaterialApp(
-            title: 'Mi Lector Anki',
+            title: 'Mi Lector',
             debugShowCheckedModeBanner: false,
             theme: appTheme.themeData,
             home: const BibliotecaScreen(),

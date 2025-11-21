@@ -23,7 +23,7 @@ class TtsService {
   Future<String?> generateWordAudio(String word, String cardId) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final audioDir = Directory('${directory.path}/anki_audio');
+      final audioDir = Directory('${directory.path}/study_audio');
       
       // Crear directorio si no existe
       if (!await audioDir.exists()) {
@@ -54,7 +54,7 @@ class TtsService {
   Future<String?> generateContextAudio(String sentence, String cardId) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final audioDir = Directory('${directory.path}/anki_audio');
+      final audioDir = Directory('${directory.path}/study_audio');
       
       if (!await audioDir.exists()) {
         await audioDir.create(recursive: true);

@@ -94,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
                 _buildInfoTile(
                   context, 
                   'Desarrollador', 
-                  'Book Lector Anki', 
+                  'Book Lector', 
                   Icons.code_rounded
                 ),
               ],

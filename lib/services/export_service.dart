@@ -2,14 +2,14 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../models/anki_card.dart';
+import '../models/study_card.dart';
 
-/// Servicio para exportar tarjetas Anki a formato CSV
+/// Servicio para exportar tarjetas de estudio a formato CSV
 class ExportService {
   
-  /// Exporta una lista de tarjetas Anki a formato CSV
+  /// Exporta una lista de tarjetas a formato CSV
   /// Retorna la ruta del archivo generado
-  Future<String> exportToCSV(List<AnkiCard> cards) async {
+  Future<String> exportToCSV(List<StudyCard> cards) async {
     try {
       // Preparar datos para CSV
       List<List<String>> rows = [];
@@ -29,7 +29,7 @@ class ExportService {
         rows.add([
           card.word,
           card.definition,
-          card.contexto,
+          card.context,
           card.audioPath ?? '',
           card.fuente,
           card.createdAt.toIso8601String(),
@@ -42,7 +42,7 @@ class ExportService {
       // Guardar archivo
       final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${directory.path}/anki_cards_export_$timestamp.csv';
+      final filePath = '${directory.path}/study_cards_export_$timestamp.csv';
       final file = File(filePath);
       await file.writeAsString(csv);
       
@@ -66,7 +66,7 @@ class ExportService {
       // Usar share_plus para compartir el archivo
       await Share.shareXFiles(
         [XFile(filePath)],
-        subject: 'Tarjetas Anki - Exportación',
+        subject: 'Tarjetas de Estudio - Exportación',
         text: 'Tarjetas de vocabulario para importar en Anki',
       );
       
@@ -79,7 +79,7 @@ class ExportService {
   }
   
   /// Exporta y comparte en un solo paso
-  Future<void> exportAndShare(List<AnkiCard> cards) async {
+  Future<void> exportAndShare(List<StudyCard> cards) async {
     if (cards.isEmpty) {
       throw Exception('No hay tarjetas para exportar');
     }
@@ -90,19 +90,19 @@ class ExportService {
   
   /// Genera formato de texto para importación manual en Anki
   /// Retorna un String con el formato: palabra;definición;oración
-  String generateAnkiText(List<AnkiCard> cards) {
+  String generateAnkiText(List<StudyCard> cards) {
     final buffer = StringBuffer();
     
     for (var card in cards) {
       // Formato: palabra;definición;oración;fuente
-      buffer.writeln('${card.word};${card.definition};${card.contexto};${card.fuente}');
+      buffer.writeln('${card.word};${card.definition};${card.context};${card.fuente}');
     }
     
     return buffer.toString();
   }
   
   /// Obtiene estadísticas de las tarjetas para el reporte de exportación
-  Map<String, dynamic> getExportStats(List<AnkiCard> cards) {
+  Map<String, dynamic> getExportStats(List<StudyCard> cards) {
     if (cards.isEmpty) {
       return {
         'total': 0,

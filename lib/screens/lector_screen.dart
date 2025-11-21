@@ -12,7 +12,7 @@ import '../services/local_storage_service.dart';
 import '../services/settings_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
-import '../widgets/anki_edit_modal.dart';
+import '../widgets/study_edit_modal.dart';
 import '../widgets/premium_toast.dart';
 
 class LectorScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   bool _canPop = false;
   
   // Estado temporal para selección manual de contexto
-  Map<String, dynamic>? _pendingAnkiData;
+  Map<String, dynamic>? _pendingStudyData;
 
   @override
   void initState() {
@@ -652,7 +652,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           }
                         }
                       },
-                      onSaveToAnki: () async {
+                      onSaveToStudy: () async {
                         if (_currentSelection.isEmpty) {
                           PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
                           return;
@@ -663,15 +663,15 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         String initialDefinition = '';
                         String initialExample = '';
 
-                        if (_pendingAnkiData != null) {
+                        if (_pendingStudyData != null) {
                           // Modo selección manual: la selección actual ES el contexto
                           initialContext = _currentSelection;
                           // Restaurar datos previos
-                          initialWord = _pendingAnkiData!['word'] ?? '';
-                          initialDefinition = _pendingAnkiData!['definition'] ?? '';
-                          initialExample = _pendingAnkiData!['example'] ?? '';
+                          initialWord = _pendingStudyData!['word'] ?? '';
+                          initialDefinition = _pendingStudyData!['definition'] ?? '';
+                          initialExample = _pendingStudyData!['example'] ?? '';
                           // Limpiar estado pendiente
-                          setState(() => _pendingAnkiData = null);
+                          setState(() => _pendingStudyData = null);
                         } else {
                           // Modo normal: extracción automática
                           initialContext = _extractSentence(_currentSelection, chapters[index].plainText);
@@ -684,7 +684,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
-                          builder: (context) => AnkiEditModal(
+                          builder: (context) => StudyEditModal(
                             word: initialWord,
                             bookId: widget.book.id,
                             bookTitle: widget.book.title,
@@ -697,11 +697,11 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         // Manejar solicitud de contexto manual
                         if (result != null && result is Map && result['action'] == 'manual_context') {
                           setState(() {
-                            _pendingAnkiData = result['formData'];
+                            _pendingStudyData = result['formData'];
                           });
                         }
                       },
-                      isSelectingContext: _pendingAnkiData != null,
+                      isSelectingContext: _pendingStudyData != null,
                     );
                   },
                 );
@@ -774,7 +774,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Botón flotante de acción rápida para Anki si hay selección
+                  // Botón flotante de acción rápida para guardar si hay selección
                   if (_currentSelection.isNotEmpty)
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
@@ -790,7 +790,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           ),
           
           // Panel de Selección de Contexto Manual
-          if (_pendingAnkiData != null)
+          if (_pendingStudyData != null)
             Positioned(
               bottom: 24,
               left: 24,
@@ -842,7 +842,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () {
-                          setState(() => _pendingAnkiData = null);
+                          setState(() => _pendingStudyData = null);
                         },
                         tooltip: 'Cancelar',
                       ),
@@ -868,7 +868,7 @@ class _ChapterView extends StatefulWidget {
   final TextAlign textAlign;
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
-  final VoidCallback onSaveToAnki;
+  final VoidCallback onSaveToStudy;
   final bool isSelectingContext;
 
   const _ChapterView({
@@ -881,7 +881,7 @@ class _ChapterView extends StatefulWidget {
     required this.textAlign,
     required this.onSelectionChanged,
     required this.onProgressChanged,
-    required this.onSaveToAnki,
+    required this.onSaveToStudy,
     this.isSelectingContext = false,
   });
 
@@ -1008,9 +1008,9 @@ class _ChapterViewState extends State<_ChapterView> {
           ContextMenuButtonItem(
             onPressed: () {
               editableTextState.hideToolbar();
-              widget.onSaveToAnki();
+              widget.onSaveToStudy();
             },
-            label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar en Anki',
+            label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
           ),
         );
 

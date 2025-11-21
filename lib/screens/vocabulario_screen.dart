@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/anki_card.dart';
-import '../services/anki_database_service.dart';
+import '../models/study_card.dart';
+import '../services/study_database_service.dart';
 import '../services/dictionary_service.dart';
 import '../services/export_service.dart';
 import '../services/tts_service.dart';
@@ -16,12 +16,12 @@ class VocabularioScreen extends StatefulWidget {
 }
 
 class _VocabularioScreenState extends State<VocabularioScreen> {
-  final AnkiDatabaseService _databaseService = AnkiDatabaseService();
+  final StudyDatabaseService _databaseService = StudyDatabaseService();
   final ExportService _exportService = ExportService();
   final TtsService _ttsService = TtsService();
   final DictionaryService _dictionaryService = DictionaryService(); // Added service
   
-  List<AnkiCard> _cards = [];
+  List<StudyCard> _cards = [];
   bool _isLoading = true;
   String _searchQuery = '';
   
@@ -52,14 +52,14 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     }
   }
   
-  List<AnkiCard> get _filteredCards {
+  List<StudyCard> get _filteredCards {
     if (_searchQuery.isEmpty) return _cards;
     
     final query = _searchQuery.toLowerCase();
     return _cards.where((card) {
       return card.word.toLowerCase().contains(query) ||
              card.definition.toLowerCase().contains(query) ||
-             card.contexto.toLowerCase().contains(query);
+             card.context.toLowerCase().contains(query);
     }).toList();
   }
   
@@ -107,7 +107,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     }
   }
   
-  Future<void> _deleteCard(AnkiCard card) async {
+  Future<void> _deleteCard(StudyCard card) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -698,8 +698,8 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                             card: card,
                             onDelete: () => _deleteCard(card),
                             onPlayWord: () => _playAudio(card.word, isWord: true),
-                            onPlaySentence: () => _playAudio(card.contexto, isWord: false),
-                            onExplainContext: () => _explainContext(card.contexto),
+                            onPlaySentence: () => _playAudio(card.context, isWord: false),
+                            onExplainContext: () => _explainContext(card.context),
                           );
                         },
                       ),
@@ -756,7 +756,7 @@ class _StatItem extends StatelessWidget {
 }
 
 class _CardTile extends StatelessWidget {
-  final AnkiCard card;
+  final StudyCard card;
   final VoidCallback onDelete;
   final VoidCallback onPlayWord;
   final VoidCallback onPlaySentence;
@@ -929,7 +929,7 @@ class _CardTile extends StatelessWidget {
                     border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
                   ),
                   child: Text(
-                    card.contexto,
+                    card.context,
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
                       color: colorScheme.onSurfaceVariant,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../models/anki_card.dart';
-import '../services/anki_database_service.dart';
+import '../models/study_card.dart';
+import '../services/study_database_service.dart';
 import '../services/dictionary_service.dart';
 import '../services/tts_service.dart';
 import 'premium_toast.dart';
 
-class AnkiEditModal extends StatefulWidget {
+class StudyEditModal extends StatefulWidget {
   final String word;
   final String context;
   final String bookTitle;
@@ -14,7 +14,7 @@ class AnkiEditModal extends StatefulWidget {
   final String? initialDefinition;
   final String? initialExample;
 
-  const AnkiEditModal({
+  const StudyEditModal({
     super.key,
     required this.word,
     required this.context,
@@ -25,17 +25,17 @@ class AnkiEditModal extends StatefulWidget {
   });
 
   @override
-  State<AnkiEditModal> createState() => _AnkiEditModalState();
+  State<StudyEditModal> createState() => _StudyEditModalState();
 }
 
-class _AnkiEditModalState extends State<AnkiEditModal> {
+class _StudyEditModalState extends State<StudyEditModal> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _wordController;
   late TextEditingController _definitionController;
   late TextEditingController _contextController;
   late TextEditingController _exampleController;
   
-  final AnkiDatabaseService _ankiDatabase = AnkiDatabaseService();
+  final StudyDatabaseService _studyDatabase = StudyDatabaseService();
   final DictionaryService _dictionaryService = DictionaryService();
   final TtsService _ttsService = TtsService();
   
@@ -121,9 +121,8 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
   }
 
   Future<void> _checkDuplicate() async {
-    // Consulta AnkiDatabaseService.cardExists(word).
-    // Usamos wordExistsInBook ya que es el método existente en el servicio.
-    final exists = await _ankiDatabase.wordExistsInBook(widget.word, widget.bookId);
+    // Consulta StudyDatabaseService.wordExistsInBook(word).
+    final exists = await _studyDatabase.wordExistsInBook(widget.word, widget.bookId);
     if (mounted) {
       setState(() {
         _cardExists = exists;
@@ -140,23 +139,26 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
       final cardId = const Uuid().v4();
       final audioPath = await _ttsService.generateWordAudio(_wordController.text, cardId);
 
-      final newCard = AnkiCard(
+      final newCard = StudyCard(
         id: cardId,
         bookId: widget.bookId,
-        word: _wordController.text,
-        definition: _definitionController.text,
-        contexto: _contextController.text,
-        example: _exampleController.text,
+        type: StudyCardType.enrichment, // Por defecto enrichment (definición)
+        content: {
+          'word': _wordController.text,
+          'definition': _definitionController.text,
+          'context': _contextController.text,
+          'example': _exampleController.text,
+        },
         audioPath: audioPath,
         fuente: widget.bookTitle,
         createdAt: DateTime.now(),
       );
       
-      await _ankiDatabase.insertCard(newCard);
+      await _studyDatabase.insertCard(newCard);
       
       if (mounted) {
         Navigator.pop(context);
-        PremiumToast.show(context, 'Guardado en Anki', isSuccess: true);
+        PremiumToast.show(context, 'Guardado en Estudio', isSuccess: true);
       }
     } catch (e) {
       debugPrint('Error saving card: $e');
@@ -223,7 +225,7 @@ class _AnkiEditModalState extends State<AnkiEditModal> {
                   Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
                   const SizedBox(width: 12),
                   Text(
-                    'Crear Tarjeta Anki',
+                    'Crear Tarjeta de Estudio',
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
