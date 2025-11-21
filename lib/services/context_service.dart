@@ -5,7 +5,7 @@ enum ContextMode {
 
 class ContextService {
   /// Extrae el contexto (oración o párrafo) alrededor de una palabra seleccionada.
-  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, int? selectionIndex}) {
+  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, double scrollPercentage = 0.0}) {
     if (word.isEmpty || fullText.isEmpty) return "";
 
     // 1. Encontrar la posición de la palabra
@@ -23,18 +23,18 @@ class ContextService {
       return _expandBoundaries(fullText, wordIndex, wordIndex + word.length, mode);
     }
 
+    // Nueva lógica de proximidad basada en scroll
+    int estimatedIndex = (fullText.length * scrollPercentage).toInt();
+    
+    // Iterar matches y buscar el más cercano a estimatedIndex
     RegExpMatch bestMatch = matches.first;
-
-    // Lógica de proximidad
-    if (selectionIndex != null) {
-      int minDistance = (matches.first.start - selectionIndex).abs();
-      
-      for (final match in matches) {
-        final distance = (match.start - selectionIndex).abs();
-        if (distance < minDistance) {
-          minDistance = distance;
-          bestMatch = match;
-        }
+    int minDiff = (matches.first.start - estimatedIndex).abs();
+    
+    for (var match in matches) {
+      int diff = (match.start - estimatedIndex).abs();
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestMatch = match;
       }
     }
 

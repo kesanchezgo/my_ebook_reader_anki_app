@@ -558,7 +558,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           }
                         }
                       },
-                      onSaveToStudy: (int? selectionIndex) async {
+                      onSaveToStudy: (double scrollPercentage) async {
                         if (_currentSelection.isEmpty) {
                           PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
                           return;
@@ -585,7 +585,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             _currentSelection, 
                             chapters[index].plainText,
                             mode: ContextMode.paragraph,
-                            selectionIndex: selectionIndex
+                            scrollPercentage: scrollPercentage
                           );
                         }
 
@@ -780,7 +780,7 @@ class _ChapterView extends StatefulWidget {
   final TextAlign textAlign;
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
-  final Function(int?) onSaveToStudy;
+  final Function(double) onSaveToStudy;
   final bool isSelectingContext;
 
   const _ChapterView({
@@ -919,21 +919,15 @@ class _ChapterViewState extends State<_ChapterView> {
           0,
           ContextMenuButtonItem(
             onPressed: () {
-              int? index;
-              try {
-                // Intentamos obtener la selección del estado
-                // Usamos dynamic para acceder a 'selection' que es propiedad de SelectableRegionState
-                final dynamic state = editableTextState;
-                final selection = state.selection;
-                if (selection != null) {
-                  index = selection.start.offset;
-                }
-              } catch (e) {
-                debugPrint('Error getting selection index: $e');
+              double currentProgress = 0.0;
+              if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
+                currentProgress = _scrollController.offset / _scrollController.position.maxScrollExtent;
               }
+              // Clamp para asegurar que esté entre 0.0 y 1.0
+              currentProgress = currentProgress.clamp(0.0, 1.0);
               
               editableTextState.hideToolbar();
-              widget.onSaveToStudy(index);
+              widget.onSaveToStudy(currentProgress);
             },
             label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
           ),
