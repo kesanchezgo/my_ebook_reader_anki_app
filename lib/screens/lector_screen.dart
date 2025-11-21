@@ -348,7 +348,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       ),
                       TextButton.icon(
                         onPressed: () async {
-                          await SettingsService.instance.resetToDefaults();
+                          await SettingsService.instance.resetReaderSettings();
                           _loadSettings();
                           setState(() {});
                           setModalState(() {});

@@ -207,4 +207,12 @@ class SettingsService {
     await setDictionaryPriority(_defaultDictionaryPriority);
     await setContextPriority(_defaultContextPriority);
   }
+
+  /// Restaura solo la configuración de lectura (fuente, tamaño, alineación)
+  Future<void> resetReaderSettings() async {
+    await setFontFamily(_defaultFontFamily);
+    await setFontSize(_defaultFontSize);
+    await setTextAlign(_defaultTextAlign);
+    // No reseteamos el tema ni las API keys
+  }
 }
