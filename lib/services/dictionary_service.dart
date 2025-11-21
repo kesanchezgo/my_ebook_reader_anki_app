@@ -103,6 +103,12 @@ class DictionaryService {
         case 'gemini':
           result = await _lookupGemini(cleanWord);
           break;
+        case 'perplexity':
+          result = await _lookupPerplexity(cleanWord);
+          break;
+        case 'openrouter':
+          result = await _lookupOpenRouter(cleanWord);
+          break;
         case 'local':
           result = await _lookupLocal(cleanWord);
           break;
@@ -230,6 +236,137 @@ class DictionaryService {
       }
     } catch (e) {
       print('Error consultando Gemini: $e');
+    }
+    return null;
+  }
+
+  Future<DictionaryResult?> _lookupPerplexity(String word) async {
+    final apiKey = SettingsService.instance.perplexityApiKey.trim();
+    if (apiKey.isEmpty) return null;
+
+    print('🧠 Buscando definición en Perplexity AI: $word');
+    try {
+      final url = Uri.parse('https://api.perplexity.ai/chat/completions');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+          'User-Agent': 'MyEbookReader/1.0',
+        },
+        body: jsonEncode({
+          "model": "sonar",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Define la palabra '$word' en español con estilo de diccionario. La definición debe tener entre 10 y 25 palabras, ser objetiva y precisa. Luego incluye un ejemplo de uso de entre 8 y 15 palabras. Responde SOLO con un objeto JSON con las claves 'definition' y 'example'."
+            }
+          ],
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definition": { "type": "string" },
+                  "example": { "type": "string" }
+                },
+                "required": ["definition", "example"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['choices'] != null && (data['choices'] as List).isNotEmpty) {
+          final content = data['choices'][0]['message']['content'];
+          if (content != null) {
+            try {
+              final jsonResponse = jsonDecode(content);
+              return DictionaryResult(
+                definition: jsonResponse['definition'],
+                example: jsonResponse['example'],
+                source: 'Perplexity AI',
+              );
+            } catch (e) {
+              print('Error parsing JSON from Perplexity definition: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error consultando Perplexity para definición: $e');
+    }
+    return null;
+  }
+
+  Future<DictionaryResult?> _lookupOpenRouter(String word) async {
+    final apiKey = SettingsService.instance.openRouterApiKey.trim();
+    if (apiKey.isEmpty) return null;
+
+    print('🚀 Buscando definición en OpenRouter (Grok): $word');
+    try {
+      final url = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/my-ebook-reader',
+          'X-Title': 'My Ebook Reader',
+        },
+        body: jsonEncode({
+          "model": "x-ai/grok-4.1-fast",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Define la palabra '$word' en español con estilo de diccionario. La definición debe tener entre 10 y 25 palabras, ser objetiva y precisa. Luego incluye un ejemplo de uso de entre 8 y 15 palabras. Responde SOLO con un objeto JSON con las claves 'definition' y 'example'."
+            }
+          ],
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "definicion_diccionario",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definition": { "type": "string" },
+                  "example": { "type": "string" }
+                },
+                "required": ["definition", "example"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['choices'] != null && (data['choices'] as List).isNotEmpty) {
+          final content = data['choices'][0]['message']['content'];
+          if (content != null) {
+            try {
+              final jsonResponse = jsonDecode(content);
+              return DictionaryResult(
+                definition: jsonResponse['definition'],
+                example: jsonResponse['example'],
+                source: 'OpenRouter (Grok)',
+              );
+            } catch (e) {
+              print('Error parsing JSON from OpenRouter definition: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error consultando OpenRouter para definición: $e');
     }
     return null;
   }

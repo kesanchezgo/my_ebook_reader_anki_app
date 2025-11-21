@@ -32,7 +32,7 @@ class SettingsService {
   static const String _defaultGeminiApiKey = '';
   static const String _defaultPerplexityApiKey = '';
   static const String _defaultOpenRouterApiKey = '';
-  static const List<String> _defaultDictionaryPriority = ['gemini', 'local', 'web'];
+  static const List<String> _defaultDictionaryPriority = ['gemini', 'perplexity', 'openrouter', 'local', 'web'];
   static const List<String> _defaultContextPriority = ['gemini', 'perplexity', 'openrouter'];
 
   // Current State
@@ -89,15 +89,40 @@ class SettingsService {
 
     // Migración: Asegurar que todas las opciones por defecto estén en la lista (para nuevos proveedores como openrouter)
     bool changed = false;
+    
+    // Migración Contexto
     for (final defaultItem in _defaultContextPriority) {
       if (!_contextPriority.contains(defaultItem)) {
         _contextPriority.add(defaultItem);
         changed = true;
       }
     }
-    
     if (changed) {
       await _prefs!.setStringList(_keyContextPriority, _contextPriority);
+    }
+
+    // Migración Diccionario
+    bool dictChanged = false;
+    for (final defaultItem in _defaultDictionaryPriority) {
+      if (!_dictionaryPriority.contains(defaultItem)) {
+        // Insertar al principio si son IAs, o manejar lógica específica. 
+        // Por simplicidad, añadimos al final si no existen, pero idealmente las IAs van antes de local/web si el usuario no ha personalizado mucho.
+        // Si la lista es la antigua ['gemini', 'local', 'web'], queremos insertar perplexity y openrouter después de gemini.
+        if (defaultItem == 'perplexity' || defaultItem == 'openrouter') {
+           int geminiIndex = _dictionaryPriority.indexOf('gemini');
+           if (geminiIndex != -1) {
+             _dictionaryPriority.insert(geminiIndex + 1, defaultItem);
+           } else {
+             _dictionaryPriority.insert(0, defaultItem);
+           }
+        } else {
+          _dictionaryPriority.add(defaultItem);
+        }
+        dictChanged = true;
+      }
+    }
+    if (dictChanged) {
+      await _prefs!.setStringList(_keyDictionaryPriority, _dictionaryPriority);
     }
     
     // Update notifier

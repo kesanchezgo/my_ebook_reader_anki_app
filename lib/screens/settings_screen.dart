@@ -57,13 +57,21 @@ class SettingsScreen extends StatelessWidget {
           
           const SizedBox(height: 32),
 
-          _buildSectionHeader(context, 'Diccionario Inteligente'),
+          _buildSectionHeader(context, 'Servicios de IA'),
           const SizedBox(height: 16),
-          _buildDictionarySection(context),
+          _buildAiServicesSection(context),
           
           const SizedBox(height: 32),
 
-          _buildContextSection(context),
+          _buildSectionHeader(context, 'Diccionario Inteligente'),
+          const SizedBox(height: 16),
+          _buildDictionaryPrioritySection(context),
+          
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(context, 'Explicación de Contexto'),
+          const SizedBox(height: 16),
+          _buildContextPrioritySection(context),
           
           const SizedBox(height: 32),
           
@@ -97,7 +105,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDictionarySection(BuildContext context) {
+  Widget _buildAiServicesSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     
     return Container(
@@ -110,7 +118,7 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Integración con IA',
+            'Credenciales de API',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -119,17 +127,94 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Configura tu API Key de Gemini para obtener definiciones contextuales mejoradas.',
+            'Configura tus claves para habilitar las funciones de IA en el diccionario y explicaciones.',
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 20),
+          
+          // Gemini
+          _buildApiKeyField(
+            context,
+            label: 'Gemini API Key',
+            hint: 'Pega tu API Key aquí',
+            icon: Icons.auto_awesome_rounded,
+            controller: TextEditingController(text: SettingsService.instance.geminiApiKey),
+            onChanged: (val) => SettingsService.instance.setGeminiApiKey(val),
+          ),
           const SizedBox(height: 16),
-          _buildApiKeyInput(context),
-          const SizedBox(height: 24),
+          
+          // Perplexity
+          _buildApiKeyField(
+            context,
+            label: 'Perplexity API Key',
+            hint: 'pplx-...',
+            icon: Icons.psychology_rounded,
+            controller: TextEditingController(text: SettingsService.instance.perplexityApiKey),
+            onChanged: (val) => SettingsService.instance.setPerplexityApiKey(val),
+          ),
+          const SizedBox(height: 16),
+          
+          // OpenRouter
+          _buildApiKeyField(
+            context,
+            label: 'OpenRouter API Key',
+            hint: 'sk-or-...',
+            icon: Icons.cloud_circle_rounded,
+            controller: TextEditingController(text: SettingsService.instance.openRouterApiKey),
+            onChanged: (val) => SettingsService.instance.setOpenRouterApiKey(val),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApiKeyField(BuildContext context, {
+    required String label,
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: colorScheme.primary),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        filled: true,
+        fillColor: colorScheme.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+  }
+
+  Widget _buildDictionaryPrioritySection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Prioridad de Búsqueda',
+            'Prioridad de Definición',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -138,7 +223,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Arrastra para reordenar qué fuentes consultar primero.',
+            'Arrastra para reordenar qué fuentes consultar primero al buscar una palabra.',
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -151,35 +236,41 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildApiKeyInput(BuildContext context) {
+  Widget _buildContextPrioritySection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return TextField(
-      controller: TextEditingController(text: SettingsService.instance.geminiApiKey),
-      onChanged: (value) => SettingsService.instance.setGeminiApiKey(value),
-      obscureText: true,
-      decoration: InputDecoration(
-        labelText: 'Gemini API Key',
-        hintText: 'Pega tu API Key aquí',
-        prefixIcon: Icon(Icons.key_rounded, color: colorScheme.primary),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
-        ),
-        filled: true,
-        fillColor: colorScheme.surface,
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Prioridad de Explicación',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Arrastra para reordenar qué IA consultar primero al analizar el contexto.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildContextPriorityList(context),
+        ],
       ),
     );
   }
 
   Widget _buildPriorityList(BuildContext context) {
-    // Necesitamos un StatefulWidget local para manejar el reordenamiento visualmente
-    // antes de guardar, pero como SettingsScreen es Stateless, usaremos un StatefulBuilder
-    // o simplemente reconstruiremos al cambiar.
-    
     return StatefulBuilder(
       builder: (context, setState) {
         final priorities = SettingsService.instance.dictionaryPriority;
@@ -192,12 +283,10 @@ class SettingsScreen extends StatelessWidget {
               if (oldIndex < newIndex) {
                 newIndex -= 1;
               }
-              // Crear una copia mutable de la lista antes de modificarla
               final newPriorities = List<String>.from(priorities);
               final item = newPriorities.removeAt(oldIndex);
               newPriorities.insert(newIndex, item);
               
-              // Guardar la nueva lista
               SettingsService.instance.setDictionaryPriority(newPriorities);
             });
           },
@@ -215,106 +304,6 @@ class SettingsScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildContextSection(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Explicación de Contexto',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Configura las fuentes de IA para explicar el contexto de las oraciones.',
-            style: TextStyle(
-              fontSize: 13,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Perplexity API Key
-          TextField(
-            controller: TextEditingController(text: SettingsService.instance.perplexityApiKey),
-            onChanged: (value) => SettingsService.instance.setPerplexityApiKey(value),
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Perplexity API Key',
-              hintText: 'pplx-...',
-              prefixIcon: Icon(Icons.psychology_rounded, color: colorScheme.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colorScheme.outline),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colorScheme.outlineVariant),
-              ),
-              filled: true,
-              fillColor: colorScheme.surface,
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-
-          // OpenRouter API Key
-          TextField(
-            controller: TextEditingController(text: SettingsService.instance.openRouterApiKey),
-            onChanged: (value) => SettingsService.instance.setOpenRouterApiKey(value),
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'OpenRouter API Key',
-              hintText: 'sk-or-...',
-              prefixIcon: Icon(Icons.cloud_circle_rounded, color: colorScheme.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colorScheme.outline),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: colorScheme.outlineVariant),
-              ),
-              filled: true,
-              fillColor: colorScheme.surface,
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          Text(
-            'Prioridad de Explicación',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Arrastra para reordenar qué IA consultar primero.',
-            style: TextStyle(
-              fontSize: 13,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildContextPriorityList(context),
-        ],
-      ),
     );
   }
 
