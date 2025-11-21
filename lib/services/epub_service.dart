@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:epubx/epubx.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
 import 'package:path/path.dart' as p;
 import '../models/book.dart';
 import 'local_storage_service.dart';
@@ -19,11 +20,15 @@ class ChapterData {
   final String title;
   final String htmlContent; // Con estilos inyectados e imágenes en Base64
   final String plainText;   // Texto limpio para buscar oraciones
+  final List<String> paragraphs; // Lista de párrafos atomizados
+  final String css; // Estilos CSS extraídos del capítulo
 
   ChapterData({
     required this.title,
     required this.htmlContent,
     required this.plainText,
+    required this.paragraphs,
+    required this.css,
   });
 }
 
@@ -112,6 +117,8 @@ class EpubService {
           title: 'Error',
           htmlContent: '<div id="chapter-content"><h1>Error al cargar el libro</h1><p>${e.toString()}</p></div>',
           plainText: 'Error al cargar el libro',
+          paragraphs: ['<p>Error al cargar el libro: ${e.toString()}</p>'],
+          css: '',
         )
       ];
     }
@@ -201,11 +208,149 @@ class EpubService {
     // Envolver en div con id="chapter-content"
     final wrappedHtml = '<div id="chapter-content">$bodyContent</div>';
 
+    // 4. Generar lista de párrafos atomizados
+    final paragraphs = _splitHtmlContent(document);
+
+    // 5. Extraer CSS
+    final css = _extractCss(document, book);
+
     return ChapterData(
       title: title,
       htmlContent: wrappedHtml,
       plainText: plainText,
+      paragraphs: paragraphs,
+      css: css,
     );
+  }
+
+  String _extractCss(dom.Document document, EpubBook book) {
+    final StringBuffer cssBuffer = StringBuffer();
+    final cssFiles = book.Content?.Css;
+
+    // 1. Extraer estilos de <link rel="stylesheet">
+    document.querySelectorAll('link[rel="stylesheet"]').forEach((link) {
+      final href = link.attributes['href'];
+      if (href != null && cssFiles != null) {
+        // Resolver ruta relativa o absoluta
+        // Intentar encontrar el archivo CSS en el mapa de recursos
+        // Las claves en cssFiles suelen ser rutas completas como "OEBPS/Styles/style.css"
+        // El href puede ser "../Styles/style.css" o "style.css"
+        
+        // Estrategia simple: buscar por nombre de archivo
+        final filename = href.split('/').last;
+        try {
+          final key = cssFiles.keys.firstWhere(
+            (k) => k.endsWith(filename), 
+            orElse: () => ''
+          );
+          
+          if (key.isNotEmpty) {
+            final cssContent = cssFiles[key]?.Content;
+            if (cssContent != null) {
+              cssBuffer.writeln(cssContent);
+            }
+          }
+        } catch (e) {
+          print('Error extrayendo CSS $href: $e');
+        }
+      }
+    });
+
+    // 2. Extraer estilos de <style>
+    document.querySelectorAll('style').forEach((style) {
+      cssBuffer.writeln(style.text);
+    });
+
+    // Reemplazar selectores 'body' por '.epub-body' para que apliquen dentro del widget
+    // Usamos una regex que busca 'body' precedido por inicio, espacio, coma o combinadores
+    String css = cssBuffer.toString();
+    css = css.replaceAll(RegExp(r'(^|[\s,>+~])body\b', caseSensitive: false), r'$1.epub-body');
+    
+    return css;
+  }
+
+  List<String> _splitHtmlContent(dom.Document document) {
+    final List<String> result = [];
+    final body = document.body;
+    if (body == null) return [];
+
+    // Pasar el body como contexto inicial, pero no envolveremos en body en el resultado final
+    // para evitar duplicidad de tags body.
+    _processContainer(body, result, []);
+    return result;
+  }
+
+  void _processContainer(dom.Element container, List<String> result, List<dom.Element> parents) {
+    List<dom.Node> inlineAccumulator = [];
+
+    void flushAccumulator() {
+      if (inlineAccumulator.isEmpty) return;
+      
+      final textContent = inlineAccumulator.map((n) => n.text).join();
+      if (textContent.trim().isEmpty) {
+        inlineAccumulator.clear();
+        return;
+      }
+
+      String htmlContent = inlineAccumulator.map((n) {
+        if (n is dom.Element) return n.outerHtml;
+        if (n is dom.Text) return n.text;
+        return "";
+      }).join();
+      
+      // No envolver en p forzosamente. Si el contenido original no tenía p, no debemos inventarlo.
+      // Esto evita márgenes dobles o estilos incorrectos cuando el texto estaba directo en un div.
+      String wrapped = htmlContent;
+      
+      // Aplicar jerarquía de padres para preservar selectores CSS
+      // IMPORTANTE: Incluir TODOS los padres, incluso divs sin atributos, 
+      // para que los selectores CSS basados en estructura (ej: div > p) funcionen.
+      for (var parent in parents.reversed) {
+         final attrs = parent.attributes.entries.map((e) => '${e.key}="${e.value}"').join(' ');
+         wrapped = '<${parent.localName} $attrs>$wrapped</${parent.localName}>';
+      }
+      
+      result.add(wrapped);
+      inlineAccumulator.clear();
+    }
+
+    for (var node in container.nodes) {
+      if (node is dom.Element && _isBlock(node)) {
+        flushAccumulator(); 
+        
+        if (_hasBlockChildren(node)) {
+          // Añadir este nodo a la lista de padres y recursar
+          final newParents = List<dom.Element>.from(parents)..add(node);
+          _processContainer(node, result, newParents); 
+        } else {
+          // Bloque hoja. Envolver en sus padres.
+          String wrapped = node.outerHtml;
+          for (var parent in parents.reversed) {
+             final attrs = parent.attributes.entries.map((e) => '${e.key}="${e.value}"').join(' ');
+             wrapped = '<${parent.localName} $attrs>$wrapped</${parent.localName}>';
+          }
+          result.add(wrapped);
+        }
+      } else {
+        inlineAccumulator.add(node);
+      }
+    }
+    flushAccumulator(); 
+  }
+
+  bool _isBlock(dom.Element e) {
+    final blockTags = [
+      'p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+      'li', 'blockquote', 'pre', 'hr', 'table', 'ul', 'ol', 
+      'section', 'article', 'header', 'footer'
+    ];
+    return blockTags.contains(e.localName);
+  }
+  
+  bool _hasBlockChildren(dom.Element e) {
+    // No dividir estructuras complejas que dependen de su contenedor padre
+    if (['ul', 'ol', 'table', 'pre', 'figure'].contains(e.localName)) return false;
+    return e.children.any((c) => _isBlock(c));
   }
 
   String _getMimeType(String path) {

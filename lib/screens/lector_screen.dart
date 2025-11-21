@@ -6,6 +6,8 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:html/parser.dart' as html_parser;
 import '../models/book.dart';
 import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
@@ -348,12 +350,12 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: colorScheme.primary),
                         dropdownColor: colorScheme.surfaceContainerHighest,
                         style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                        items: ['Merriweather', 'Lato', 'Lora', 'Roboto Mono']
+                        items: ['Original', 'Merriweather', 'Lato', 'Lora', 'Roboto Mono']
                             .map((font) => DropdownMenuItem(
                                   value: font,
                                   child: Text(
                                     font,
-                                    style: GoogleFonts.getFont(font),
+                                    style: font == 'Original' ? null : GoogleFonts.getFont(font),
                                   ),
                                 ))
                             .toList(),
@@ -558,7 +560,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           }
                         }
                       },
-                      onSaveToStudy: (double scrollPercentage) async {
+                      onSaveToStudy: (String contextText) async {
                         if (_currentSelection.isEmpty) {
                           PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
                           return;
@@ -579,14 +581,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           // Limpiar estado pendiente
                           setState(() => _pendingStudyData = null);
                         } else {
-                          // Modo normal: extracción automática usando ContextService
-                          // TODO: Permitir configurar ContextMode desde ajustes del libro
-                          initialContext = _contextService.extractContext(
-                            word: _currentSelection, 
-                            fullText: chapters[index].plainText,
-                            mode: ContextMode.paragraph,
-                            scrollPercentage: scrollPercentage
-                          );
+                          // Modo normal: El contexto viene directo del párrafo seleccionado
+                          initialContext = contextText;
                         }
 
                         final result = await showModalBottomSheet(
@@ -780,7 +776,7 @@ class _ChapterView extends StatefulWidget {
   final TextAlign textAlign;
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
-  final Function(double) onSaveToStudy;
+  final Function(String) onSaveToStudy;
   final bool isSelectingContext;
 
   const _ChapterView({
@@ -802,34 +798,32 @@ class _ChapterView extends StatefulWidget {
 }
 
 class _ChapterViewState extends State<_ChapterView> {
-  late ScrollController _scrollController;
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   Timer? _scrollSaveTimer;
-  bool _isLoading = true; // Estado de carga para evitar saltos visuales
-  double _savedOffset = 0.0;
+  bool _isLoading = true;
+  int _savedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     
-    // 1. Obtener offset guardado
-    final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
-    _savedOffset = SettingsService.instance.getDouble(key) ?? 0.0;
+    // 1. Obtener índice guardado
+    final key = 'scroll_index_${widget.bookId}_${widget.chapterIndex}';
+    _savedIndex = SettingsService.instance.getInt(key) ?? 0;
     
-    // 2. Inicializar controller
-    _scrollController = ScrollController(initialScrollOffset: _savedOffset);
-    _scrollController.addListener(_onScroll);
+    _itemPositionsListener.itemPositions.addListener(_onScroll);
     
-    // 3. Timeout de seguridad para quitar el loading si tarda mucho
+    // 3. Timeout de seguridad
     Timer(const Duration(milliseconds: 800), () {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
-        _onScroll(); // Intentar actualizar progreso una última vez
       }
     });
 
-    // 4. Verificar carga inicial
+    // 4. Restaurar posición
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkScrollRestoration();
+      _restorePosition();
     });
   }
 
@@ -837,57 +831,38 @@ class _ChapterViewState extends State<_ChapterView> {
   void dispose() {
     _scrollSaveTimer?.cancel();
     _saveScrollPosition();
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _itemPositionsListener.itemPositions.removeListener(_onScroll);
     super.dispose();
   }
 
-  void _checkScrollRestoration() {
-    if (!_scrollController.hasClients) return;
-
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    
-    // Si ya tenemos contenido suficiente para restaurar la posición
-    if (maxScroll >= _savedOffset) {
-      if (_savedOffset > 0) {
-        _scrollController.jumpTo(_savedOffset);
-      }
-      
-      if (_isLoading) {
-        setState(() => _isLoading = false);
-      }
-      
-      // Forzar actualización de progreso
-      _updateProgress();
-    } else {
-      // Si el contenido aún es pequeño (cargando imágenes/fuentes), esperamos
-      // El NotificationListener llamará a _onScroll/_checkScrollRestoration
+  void _restorePosition() {
+    if (_savedIndex > 0 && _savedIndex < widget.chapter.paragraphs.length) {
+      _itemScrollController.jumpTo(index: _savedIndex);
     }
+    setState(() => _isLoading = false);
   }
 
   void _onScroll() {
-    if (_isLoading) {
-      _checkScrollRestoration();
-    } else {
-      _updateProgress();
-      
-      // Debounce save
-      if (_scrollSaveTimer?.isActive ?? false) _scrollSaveTimer!.cancel();
-      if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
-         _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
-      }
-    }
+    if (_isLoading) return;
+    
+    _updateProgress();
+    
+    // Debounce save
+    if (_scrollSaveTimer?.isActive ?? false) _scrollSaveTimer!.cancel();
+    _scrollSaveTimer = Timer(const Duration(seconds: 1), _saveScrollPosition);
   }
 
   void _updateProgress() {
-    if (!_scrollController.hasClients) return;
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
     
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
+    // Usar el último elemento visible para calcular progreso
+    final lastVisible = positions.last.index;
+    final total = widget.chapter.paragraphs.length;
     
     double progress = 0.0;
-    if (maxScroll > 10) { 
-      progress = currentScroll / maxScroll;
+    if (total > 0) {
+      progress = (lastVisible + 1) / total;
     }
     
     progress = progress.clamp(0.0, 1.0);
@@ -895,138 +870,98 @@ class _ChapterViewState extends State<_ChapterView> {
   }
 
   Future<void> _saveScrollPosition() async {
-    final key = 'scroll_${widget.bookId}_${widget.chapterIndex}';
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+    
+    // Guardar el primer elemento visible
+    final firstVisible = positions.first.index;
+    
+    final key = 'scroll_index_${widget.bookId}_${widget.chapterIndex}';
     try {
-      if (_scrollController.hasClients) {
-        await SettingsService.instance.setDouble(key, _scrollController.offset);
-      }
+      await SettingsService.instance.setInt(key, firstVisible);
     } catch (e) {
       debugPrint('Error saving scroll position: $e');
     }
   }
 
+  String _cleanHtml(String html) {
+    final document = html_parser.parse(html);
+    return document.body?.text ?? "";
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SelectionArea(
-      onSelectionChanged: (selection) {
-        widget.onSelectionChanged(selection?.plainText ?? '');
-      },
-      contextMenuBuilder: (context, editableTextState) {
-        final List<ContextMenuButtonItem> buttonItems =
-            editableTextState.contextMenuButtonItems;
-        
-        buttonItems.insert(
-          0,
-          ContextMenuButtonItem(
-            onPressed: () {
-              editableTextState.hideToolbar();
+    return Stack(
+      children: [
+        AnimatedOpacity(
+          opacity: _isLoading ? 0.0 : 1.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          child: ScrollablePositionedList.builder(
+            itemScrollController: _itemScrollController,
+            itemPositionsListener: _itemPositionsListener,
+            itemCount: widget.chapter.paragraphs.length,
+            padding: const EdgeInsets.only(
+              left: 24.0, 
+              right: 24.0, 
+              top: 100.0, 
+              bottom: 100.0 
+            ),
+            itemBuilder: (context, index) {
+              final paragraphHtml = widget.chapter.paragraphs[index];
+              // Inyectar CSS global del capítulo en cada párrafo para asegurar estilos
+              // Envolvemos en .epub-body para simular el body del documento original
+              final htmlWithCss = '<style>${widget.chapter.css}</style><div class="epub-body">$paragraphHtml</div>';
               
-              // CÁLCULO MEJORADO DE POSICIÓN
-              double currentProgress = 0.0;
-              if (_scrollController.hasClients) {
-                try {
-                  final scrollOffset = _scrollController.offset;
-                  final maxScroll = _scrollController.position.maxScrollExtent;
-                  final viewportHeight = _scrollController.position.viewportDimension;
+              return SelectionArea(
+                onSelectionChanged: (selection) {
+                  widget.onSelectionChanged(selection?.plainText ?? '');
+                },
+                contextMenuBuilder: (context, editableTextState) {
+                  final List<ContextMenuButtonItem> buttonItems =
+                      editableTextState.contextMenuButtonItems;
                   
-                  // Intentar obtener la posición del toque
-                  double touchYRelative = 0.5; // Default: centro del viewport
-                  try {
-                    final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
-                    touchYRelative = anchor.dy / viewportHeight; // Normalizado 0-1 dentro del viewport
-                  } catch (e) {
-                    debugPrint("No se pudo obtener anchor, usando centro");
-                  }
-                  
-                  // CÁLCULO HÍBRIDO MEJORADO
-                  double scrollProgress = 0.0;
-                  double viewportSize = 0.0;
-                  double touchOffset = 0.0;
-                  
-                  if (maxScroll > 0) {
-                    // 1. Posición base del scroll
-                    scrollProgress = scrollOffset / maxScroll;
-                    
-                    // 2. Ajuste fino basado en la posición del toque dentro del viewport
-                    viewportSize = viewportHeight / (maxScroll + viewportHeight);
-                    touchOffset = touchYRelative * viewportSize;
-                    
-                    // 3. Combinar ambos
-                    currentProgress = scrollProgress + touchOffset;
-                  } else {
-                    // Documento corto que cabe en una pantalla
-                    currentProgress = touchYRelative;
-                  }
-                  
-                  currentProgress = currentProgress.clamp(0.0, 1.0);
-                  
-                  // DEBUG (temporal - eliminar después de probar)
-                  debugPrint("=== DEBUG POSICIÓN ===");
-                  debugPrint("Scroll: ${scrollOffset.toInt()}/${maxScroll.toInt()}");
-                  debugPrint("ScrollProgress: ${(scrollProgress * 100).toInt()}%");
-                  debugPrint("TouchY relativo: ${(touchYRelative * 100).toInt()}%");
-                  debugPrint("Progress final: ${(currentProgress * 100).toInt()}%");
-                  debugPrint("=====================");
-                  
-                } catch (e) {
-                  debugPrint("Error calculando posición: $e");
-                  // Fallback: usar scroll básico
-                  if (_scrollController.position.maxScrollExtent > 0) {
-                    currentProgress = _scrollController.offset / 
-                                    _scrollController.position.maxScrollExtent;
-                  }
-                }
-              }
+                  buttonItems.insert(
+                    0,
+                    ContextMenuButtonItem(
+                      onPressed: () {
+                        editableTextState.hideToolbar();
+                        // Contexto EXACTO: El texto limpio del párrafo actual
+                        final cleanContext = _cleanHtml(paragraphHtml);
+                        widget.onSaveToStudy(cleanContext);
+                      },
+                      label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
+                    ),
+                  );
 
-              widget.onSaveToStudy(currentProgress);
-
-            },
-            label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
-          ),
-        );
-
-        return AdaptiveTextSelectionToolbar.buttonItems(
-          anchors: editableTextState.contextMenuAnchors,
-          buttonItems: buttonItems,
-        );
-      },
-      child: Stack(
-        children: [
-          // Contenido con opacidad animada
-          AnimatedOpacity(
-            opacity: _isLoading ? 0.0 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            child: NotificationListener<ScrollMetricsNotification>(
-              onNotification: (metrics) {
-                if (_isLoading) {
-                   _checkScrollRestoration();
-                }
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: const EdgeInsets.only(
-                  left: 24.0, 
-                  right: 24.0, 
-                  top: 100.0, 
-                  bottom: 100.0 
-                ),
+                  return AdaptiveTextSelectionToolbar.buttonItems(
+                    anchors: editableTextState.contextMenuAnchors,
+                    buttonItems: buttonItems,
+                  );
+                },
                 child: HtmlWidget(
-                  widget.chapter.htmlContent,
-                  key: ValueKey('html_${widget.chapterIndex}_${widget.textAlign}_${widget.fontFamily}_${widget.fontSize}'),
-                  textStyle: GoogleFonts.getFont(
-                    widget.fontFamily,
-                    fontSize: widget.fontSize,
-                    color: widget.textColor,
-                    height: 1.6,
-                  ),
+                  htmlWithCss,
+                  // Key única para forzar rebuild si cambian estilos
+                  key: ValueKey('p_${index}_${widget.chapterIndex}_${widget.textAlign}_${widget.fontFamily}_${widget.fontSize}'),
+                  textStyle: widget.fontFamily == 'Original'
+                      ? TextStyle(
+                          fontSize: widget.fontSize,
+                          color: widget.textColor,
+                        )
+                      : GoogleFonts.getFont(
+                          widget.fontFamily,
+                          fontSize: widget.fontSize,
+                          color: widget.textColor,
+                          // height: 1.6, // Eliminado para no forzar altura de línea
+                        ),
                   customStylesBuilder: (element) {
-                    if (element.localName == 'p' || element.localName == 'div') {
+                    // Solo aplicar estilos si el usuario fuerza justificado, de lo contrario respetar el CSS del libro
+                    if (widget.textAlign == TextAlign.justify && (element.localName == 'p' || element.localName == 'div')) {
                       return {
-                        'text-align': widget.textAlign == TextAlign.justify ? 'justify !important' : 'left !important',
+                        'text-align': 'justify',
                       };
                     }
+                    // No forzar margin-bottom para respetar el espaciado original del libro
                     return null;
                   },
                   onTapUrl: (url) async {
@@ -1037,33 +972,32 @@ class _ChapterViewState extends State<_ChapterView> {
                      return false; 
                   },
                 ),
-              ),
+              );
+            },
+          ),
+        ),
+        
+        if (_isLoading)
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Cargando capítulo...',
+                  style: TextStyle(
+                    color: widget.textColor.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
-          
-          // Indicador de carga elegante
-          if (_isLoading)
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando capítulo...',
-                    style: TextStyle(
-                      color: widget.textColor.withOpacity(0.5),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 }
