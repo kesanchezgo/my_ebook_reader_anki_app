@@ -8,34 +8,29 @@ class ContextService {
   String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, double scrollPercentage = 0.0}) {
     if (word.isEmpty || fullText.isEmpty) return "";
 
-    // 1. Encontrar la posición de la palabra
-    // Usamos RegExp para encontrar la palabra exacta y evitar coincidencias parciales
-    // (ej. "ola" dentro de "hola")
-    final wordRegExp = RegExp(r'\b' + RegExp.escape(word) + r'\b', caseSensitive: false);
-    final matches = wordRegExp.allMatches(fullText);
-    
-    if (matches.isEmpty) {
-      // Si no se encuentra como palabra completa, intentamos búsqueda simple
-      final int wordIndex = fullText.indexOf(word);
-      if (wordIndex == -1) return "";
-      
-      // Si encontramos por búsqueda simple, usamos ese índice
-      return _expandBoundaries(fullText, wordIndex, wordIndex + word.length, mode);
-    }
+    // Escapar y buscar todas las ocurrencias
+    final escapedWord = RegExp.escape(word);
+    final matches = RegExp(r'\b' + escapedWord + r'\b', caseSensitive: false).allMatches(fullText);
 
-    // Nueva lógica de proximidad basada en scroll
-    int estimatedIndex = (fullText.length * scrollPercentage).toInt();
-    
-    // Iterar matches y buscar el más cercano a estimatedIndex
-    RegExpMatch bestMatch = matches.first;
-    int minDiff = (matches.first.start - estimatedIndex).abs();
-    
-    for (var match in matches) {
-      int diff = (match.start - estimatedIndex).abs();
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestMatch = match;
-      }
+    if (matches.isEmpty) return "";
+
+    RegExpMatch bestMatch;
+
+    if (scrollPercentage > 0 && matches.length > 1) {
+      // ESTRATEGIA DE OCURRENCIA PROPORCIONAL
+      // Si la palabra aparece 10 veces y estamos al 50% del scroll, 
+      // elegimos la 5ta ocurrencia. Esto ignora la densidad de caracteres HTML.
+      
+      // Clamp para asegurar que el porcentaje esté entre 0.0 y 1.0
+      final clampedScroll = scrollPercentage.clamp(0.0, 1.0);
+      
+      // Calcular índice en la lista de matches
+      int targetIndex = ((matches.length - 1) * clampedScroll).round();
+      
+      bestMatch = matches.elementAt(targetIndex);
+    } else {
+      // Fallback: Primera coincidencia
+      bestMatch = matches.first;
     }
 
     return _expandBoundaries(fullText, bestMatch.start, bestMatch.end, mode);
