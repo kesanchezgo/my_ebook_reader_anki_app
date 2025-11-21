@@ -919,33 +919,17 @@ class _ChapterViewState extends State<_ChapterView> {
           0,
           ContextMenuButtonItem(
             onPressed: () {
-              // Intentamos obtener el índice de selección usando el SelectionContainer
-              // En Flutter 3.3+, SelectionArea envuelve un SelectableRegion
               int? index;
-              
-              // Buscamos el estado de SelectableRegion
-              final selectableRegion = context.findAncestorStateOfType<SelectableRegionState>();
-              if (selectableRegion != null) {
-                // Obtenemos la selección actual
-                // Nota: Esto puede devolver null si no hay selección activa
-                // .selection es una propiedad de SelectableRegionState que devuelve Selection?
-                // Selection tiene start y end, que son SelectionPoint
-                // SelectionPoint tiene offset (int)
-                // Sin embargo, la API pública puede variar.
-                // Vamos a intentar acceder a la selección de manera segura
-                // Si no podemos acceder directamente, pasaremos null y el servicio usará el primer match
-                
-                // En versiones recientes, no hay un getter público simple para el offset global absoluto
-                // dentro del texto completo si hay múltiples widgets.
-                // Pero como usamos HtmlWidget dentro de un SingleChildScrollView, 
-                // el texto suele estar fragmentado.
-                
-                // Para este fix, vamos a confiar en que si no podemos obtener el índice,
-                // el fallback del servicio (primer match) es mejor que nada.
-                // Pero intentaremos pasar el índice si el usuario lo pidió explícitamente.
-                
-                // Hack: Usar el contextMenuBuilder's editableTextState si es un EditableText (TextField)
-                // Pero aquí es un HtmlWidget (SelectableRegion).
+              try {
+                // Intentamos obtener la selección del estado
+                // Usamos dynamic para acceder a 'selection' que es propiedad de SelectableRegionState
+                final dynamic state = editableTextState;
+                final selection = state.selection;
+                if (selection != null) {
+                  index = selection.start.offset;
+                }
+              } catch (e) {
+                debugPrint('Error getting selection index: $e');
               }
               
               editableTextState.hideToolbar();
