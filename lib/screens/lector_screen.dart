@@ -10,6 +10,7 @@ import '../models/book.dart';
 import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/settings_service.dart';
+import '../services/context_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
 import '../widgets/study_edit_modal.dart';
@@ -54,6 +55,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   
   // Estado temporal para selección manual de contexto
   Map<String, dynamic>? _pendingStudyData;
+  
+  final ContextService _contextService = ContextService();
 
   @override
   void initState() {
@@ -190,103 +193,6 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       return '${hours}h ${minutes}m';
     }
     return '${minutes}m';
-  }
-
-  /// Extrae la oración completa con lógica inteligente para diálogos y longitud
-  String _extractSentence(String word, String fullText) {
-    if (word.isEmpty || fullText.isEmpty) return "";
-    
-    // Nota: Esto encuentra la primera ocurrencia.
-    // Buscar la primera ocurrencia de la palabra como palabra completa usando RegExp
-    final regExp = RegExp(r'\b' + RegExp.escape(word) + r'\b');
-    final match = regExp.firstMatch(fullText);
-    if (match == null) return "";
-    int wordIndex = match.start;
-
-    // Definición de delimitadores
-    final strongDelimiters = {'.', '?', '!', '\n'};
-    final dialogueDelimiters = {'―', '—', '-'}; 
-    final weakDelimiters = {',', ';'};
-    
-    int start = wordIndex;
-    int end = wordIndex + word.length;
-    
-    // 1. Búsqueda hacia la IZQUIERDA
-    int i = start - 1;
-    while (i >= 0) {
-      final char = fullText[i];
-      
-      if (strongDelimiters.contains(char)) {
-        start = i + 1; // El inicio es después del punto/salto
-        break;
-      }
-      
-      if (dialogueDelimiters.contains(char)) {
-        start = i; // Incluimos el guion de diálogo
-        break;
-      }
-      
-      if (weakDelimiters.contains(char)) {
-        // Solo cortamos en coma si la distancia es mayor a 150 caracteres
-        if ((wordIndex - i) > 150) {
-          start = i + 1; // Cortamos después de la coma
-          break;
-        }
-      }
-      
-      if (i == 0) start = 0;
-      i--;
-    }
-
-    // 2. Búsqueda hacia la DERECHA
-    i = end;
-    while (i < fullText.length) {
-      final char = fullText[i];
-      
-      if (strongDelimiters.contains(char)) {
-        end = i + 1; // Incluimos el punto final
-        break;
-      }
-      
-      if (dialogueDelimiters.contains(char)) {
-        end = i + 1; // Incluimos el guion de cierre
-        break;
-      }
-      
-      if (weakDelimiters.contains(char)) {
-        // Solo cortamos en coma si la distancia es mayor a 150 caracteres
-        if ((i - (wordIndex + word.length)) > 150) {
-          end = i; // Excluimos la coma final
-          break;
-        }
-      }
-      
-      i++;
-      if (i == fullText.length) end = fullText.length;
-    }
-    
-    // 3. Limpieza Final
-    String extracted = fullText.substring(start, end).trim();
-
-    // Eliminar marcadores de cita tipo [1], [2]
-    extracted = extracted.replaceAll(RegExp(r'\[\d+\]'), '').trim();
-    
-    // Eliminar puntuación "suelta" y guiones al inicio
-    while (extracted.isNotEmpty && (
-        RegExp(r'^[,;]').hasMatch(extracted) || 
-        extracted.startsWith('―') || 
-        extracted.startsWith('—') || 
-        extracted.startsWith('-')
-      )) {
-      extracted = extracted.substring(1).trim();
-    }
-
-    // Eliminar guiones al final que puedan haber quedado colgando
-    while (extracted.isNotEmpty && (extracted.endsWith('―') || extracted.endsWith('—') || extracted.endsWith('-'))) {
-      extracted = extracted.substring(0, extracted.length - 1).trim();
-    }
-    
-    return extracted;
   }
 
   void _showSettingsModal() {
@@ -673,8 +579,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           // Limpiar estado pendiente
                           setState(() => _pendingStudyData = null);
                         } else {
-                          // Modo normal: extracción automática
-                          initialContext = _extractSentence(_currentSelection, chapters[index].plainText);
+                          // Modo normal: extracción automática usando ContextService
+                          // TODO: Permitir configurar ContextMode desde ajustes del libro
+                          initialContext = _contextService.extractContext(
+                            _currentSelection, 
+                            chapters[index].plainText,
+                            mode: ContextMode.paragraph
+                          );
                         }
 
                         final result = await showModalBottomSheet(
