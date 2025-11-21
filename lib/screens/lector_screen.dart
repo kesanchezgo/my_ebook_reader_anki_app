@@ -919,14 +919,33 @@ class _ChapterViewState extends State<_ChapterView> {
           0,
           ContextMenuButtonItem(
             onPressed: () {
-              double currentProgress = 0.0;
-              if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
-                currentProgress = _scrollController.offset / _scrollController.position.maxScrollExtent;
-              }
-              // Clamp para asegurar que esté entre 0.0 y 1.0
-              currentProgress = currentProgress.clamp(0.0, 1.0);
-              
               editableTextState.hideToolbar();
+              
+              // CÁLCULO DE PRECISIÓN BASADO EN TOQUE
+              double currentProgress = 0.0;
+              if (_scrollController.hasClients) {
+                 try {
+                   final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
+                   // Si el ancla es nula (raro), usamos el centro como fallback
+                   final touchY = anchor.dy;
+                   
+                   final scrollOffset = _scrollController.offset;
+                   final maxScroll = _scrollController.position.maxScrollExtent;
+                   final viewportHeight = _scrollController.position.viewportDimension;
+                   final totalContentHeight = maxScroll + viewportHeight;
+
+                   // Posición absoluta del clic en todo el documento
+                   final absolutePixelPosition = scrollOffset + touchY;
+                   
+                   if (totalContentHeight > 0) {
+                     currentProgress = absolutePixelPosition / totalContentHeight;
+                   }
+                 } catch (e) {
+                   debugPrint("Error calculando posición exacta: $e");
+                 }
+              }
+              // Clamp y envío
+              currentProgress = currentProgress.clamp(0.0, 1.0);
               widget.onSaveToStudy(currentProgress);
             },
             label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
