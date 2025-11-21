@@ -5,20 +5,43 @@ enum ContextMode {
 
 class ContextService {
   /// Extrae el contexto (oración o párrafo) alrededor de una palabra seleccionada.
-  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence}) {
+  String extractContext(String word, String fullText, {ContextMode mode = ContextMode.sentence, int? selectionIndex}) {
     if (word.isEmpty || fullText.isEmpty) return "";
 
     // 1. Encontrar la posición de la palabra
     // Usamos RegExp para encontrar la palabra exacta y evitar coincidencias parciales
     // (ej. "ola" dentro de "hola")
     final wordRegExp = RegExp(r'\b' + RegExp.escape(word) + r'\b', caseSensitive: false);
-    final match = wordRegExp.firstMatch(fullText);
+    final matches = wordRegExp.allMatches(fullText);
     
-    // Si no se encuentra como palabra completa, intentamos búsqueda simple
-    final int wordIndex = match?.start ?? fullText.indexOf(word);
-    
-    if (wordIndex == -1) return "";
+    if (matches.isEmpty) {
+      // Si no se encuentra como palabra completa, intentamos búsqueda simple
+      final int wordIndex = fullText.indexOf(word);
+      if (wordIndex == -1) return "";
+      
+      // Si encontramos por búsqueda simple, usamos ese índice
+      return _expandBoundaries(fullText, wordIndex, wordIndex + word.length, mode);
+    }
 
+    RegExpMatch bestMatch = matches.first;
+
+    // Lógica de proximidad
+    if (selectionIndex != null) {
+      int minDistance = (matches.first.start - selectionIndex).abs();
+      
+      for (final match in matches) {
+        final distance = (match.start - selectionIndex).abs();
+        if (distance < minDistance) {
+          minDistance = distance;
+          bestMatch = match;
+        }
+      }
+    }
+
+    return _expandBoundaries(fullText, bestMatch.start, bestMatch.end, mode);
+  }
+
+  String _expandBoundaries(String fullText, int wordIndex, int wordEnd, ContextMode mode) {
     // 2. Definir delimitadores según el modo
     final RegExp delimiters = mode == ContextMode.sentence
         ? RegExp(r'[.?!。！？\n]') // Fin de oración
@@ -35,7 +58,7 @@ class ContextService {
     }
 
     // 4. Expandir hacia la derecha
-    int end = wordIndex + word.length;
+    int end = wordEnd;
     while (end < fullText.length) {
       final char = fullText[end];
       if (delimiters.hasMatch(char)) {
@@ -75,6 +98,8 @@ class ContextService {
     //   cleaned = cleaned.substring(1).trim();
     // }
 
-    return cleaned;
+    // Nueva regex para quitar : , ; al final
+    cleaned = cleaned.replaceAll(RegExp(r'[:;,]+$'), '');
+    return cleaned.trim();
   }
 }
