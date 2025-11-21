@@ -271,7 +271,11 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                             child: Row(
                               children: [
                                 Icon(
-                                  data['source'] == 'Perplexity AI' ? Icons.psychology_rounded : Icons.auto_awesome_rounded,
+                                  data['source'] == 'Perplexity AI' 
+                                      ? Icons.psychology_rounded 
+                                      : data['source'].toString().contains('OpenRouter') 
+                                          ? Icons.cloud_circle_rounded 
+                                          : Icons.auto_awesome_rounded,
                                   size: 12,
                                   color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
                                 ),

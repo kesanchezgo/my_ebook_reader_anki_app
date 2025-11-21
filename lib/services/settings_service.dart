@@ -20,6 +20,7 @@ class SettingsService {
   static const String _keyTextAlign = 'text_align';
   static const String _keyGeminiApiKey = 'gemini_api_key';
   static const String _keyPerplexityApiKey = 'perplexity_api_key';
+  static const String _keyOpenRouterApiKey = 'openrouter_api_key';
   static const String _keyDictionaryPriority = 'dictionary_priority';
   static const String _keyContextPriority = 'context_priority';
 
@@ -30,8 +31,9 @@ class SettingsService {
   static const String _defaultTextAlign = 'justify';
   static const String _defaultGeminiApiKey = '';
   static const String _defaultPerplexityApiKey = '';
+  static const String _defaultOpenRouterApiKey = '';
   static const List<String> _defaultDictionaryPriority = ['gemini', 'local', 'web'];
-  static const List<String> _defaultContextPriority = ['gemini', 'perplexity'];
+  static const List<String> _defaultContextPriority = ['gemini', 'perplexity', 'openrouter'];
 
   // Current State
   String _fontFamily = _defaultFontFamily;
@@ -40,6 +42,7 @@ class SettingsService {
   String _textAlign = _defaultTextAlign;
   String _geminiApiKey = _defaultGeminiApiKey;
   String _perplexityApiKey = _defaultPerplexityApiKey;
+  String _openRouterApiKey = _defaultOpenRouterApiKey;
   List<String> _dictionaryPriority = _defaultDictionaryPriority;
   List<String> _contextPriority = _defaultContextPriority;
 
@@ -50,6 +53,7 @@ class SettingsService {
   String get textAlign => _textAlign;
   String get geminiApiKey => _geminiApiKey;
   String get perplexityApiKey => _perplexityApiKey;
+  String get openRouterApiKey => _openRouterApiKey;
   List<String> get dictionaryPriority => _dictionaryPriority;
   List<String> get contextPriority => _contextPriority;
 
@@ -79,8 +83,22 @@ class SettingsService {
     _textAlign = _prefs!.getString(_keyTextAlign) ?? _defaultTextAlign;
     _geminiApiKey = _prefs!.getString(_keyGeminiApiKey) ?? _defaultGeminiApiKey;
     _perplexityApiKey = _prefs!.getString(_keyPerplexityApiKey) ?? _defaultPerplexityApiKey;
+    _openRouterApiKey = _prefs!.getString(_keyOpenRouterApiKey) ?? _defaultOpenRouterApiKey;
     _dictionaryPriority = _prefs!.getStringList(_keyDictionaryPriority) ?? _defaultDictionaryPriority;
     _contextPriority = _prefs!.getStringList(_keyContextPriority) ?? _defaultContextPriority;
+
+    // Migración: Asegurar que todas las opciones por defecto estén en la lista (para nuevos proveedores como openrouter)
+    bool changed = false;
+    for (final defaultItem in _defaultContextPriority) {
+      if (!_contextPriority.contains(defaultItem)) {
+        _contextPriority.add(defaultItem);
+        changed = true;
+      }
+    }
+    
+    if (changed) {
+      await _prefs!.setStringList(_keyContextPriority, _contextPriority);
+    }
     
     // Update notifier
     themeNotifier.value = _themeId;
@@ -131,6 +149,13 @@ class SettingsService {
     await _prefs!.setString(_keyPerplexityApiKey, value);
   }
 
+  /// Guarda la API Key de OpenRouter
+  Future<void> setOpenRouterApiKey(String value) async {
+    _openRouterApiKey = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_keyOpenRouterApiKey, value);
+  }
+
   /// Guarda la prioridad de diccionarios
   Future<void> setDictionaryPriority(List<String> value) async {
     _dictionaryPriority = value;
@@ -153,6 +178,7 @@ class SettingsService {
     await setTextAlign(_defaultTextAlign);
     await setGeminiApiKey(_defaultGeminiApiKey);
     await setPerplexityApiKey(_defaultPerplexityApiKey);
+    await setOpenRouterApiKey(_defaultOpenRouterApiKey);
     await setDictionaryPriority(_defaultDictionaryPriority);
     await setContextPriority(_defaultContextPriority);
   }

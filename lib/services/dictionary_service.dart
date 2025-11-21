@@ -314,7 +314,7 @@ class DictionaryService {
     }
   }
 
-  /// Explica un contexto usando IA (Gemini o Perplexity según prioridad)
+  /// Explica un contexto usando IA (Gemini, Perplexity u OpenRouter según prioridad)
   Future<Map<String, dynamic>?> explainContext(String context) async {
     final priorities = SettingsService.instance.contextPriority;
 
@@ -328,11 +328,19 @@ class DictionaryService {
         case 'perplexity':
           result = await _explainContextPerplexity(context);
           break;
+        case 'openrouter':
+          result = await _explainContextOpenRouter(context);
+          break;
       }
 
       if (result != null) {
         // Añadir la fuente al resultado para mostrar en UI
-        result['source'] = source == 'gemini' ? 'Gemini AI' : 'Perplexity AI';
+        String sourceName = 'IA';
+        if (source == 'gemini') sourceName = 'Gemini AI';
+        else if (source == 'perplexity') sourceName = 'Perplexity AI';
+        else if (source == 'openrouter') sourceName = 'OpenRouter (Grok)';
+        
+        result['source'] = sourceName;
         return result;
       }
     }
@@ -514,6 +522,112 @@ Texto a analizar: "$context"
       print('⏱️ Error: La solicitud a Perplexity excedió el tiempo de espera (40s).');
     } catch (e) {
       print('Error consultando Perplexity para explicación: $e');
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _explainContextOpenRouter(String context) async {
+    final apiKey = SettingsService.instance.openRouterApiKey.trim();
+    if (apiKey.isEmpty) return null;
+
+    final maskedKey = apiKey.length > 10 ? '${apiKey.substring(0, 8)}...' : '***';
+    print('🚀 Explicando contexto con OpenRouter (Grok) (Key: $maskedKey)...');
+
+    try {
+      final url = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/my-ebook-reader', // Required by OpenRouter
+          'X-Title': 'My Ebook Reader', // Optional
+        },
+        body: jsonEncode({
+          "model": "x-ai/grok-4.1-fast",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres un tutor de español que ayuda a estudiantes a comprender textos complejos mediante análisis didáctico."
+            },
+            {
+              "role": "user",
+              "content": "Analiza el siguiente texto en español: \"$context\""
+            }
+          ],
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "analisis_educativo",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "main_idea": {
+                    "type": "string",
+                    "description": "Explicación clara y concisa de la idea principal del texto (máximo 2 frases)."
+                  },
+                  "complex_terms": {
+                    "type": "array",
+                    "description": "Lista de palabras o frases difíciles del texto con sus explicaciones.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "term": {
+                          "type": "string",
+                          "description": "Palabra o frase difícil extraída del texto."
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "description": "Significado sencillo de la palabra o frase en este contexto específico."
+                        }
+                      },
+                      "required": ["term", "explanation"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "usage_examples": {
+                    "type": "array",
+                    "description": "Ejemplos de uso similar o frases reescritas de forma más sencilla para facilitar la comprensión.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cultural_note": {
+                    "type": ["string", "null"],
+                    "description": "Opcional: Si hay alguna referencia cultural, idiomática o tono específico (irónico, formal, etc.), menciónalo aquí. Si no hay ninguna referencia cultural relevante, devuelve null."
+                  }
+                },
+                "required": ["main_idea", "complex_terms", "usage_examples", "cultural_note"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "max_tokens": 1000,
+          "temperature": 0.2
+        }),
+      ).timeout(const Duration(seconds: 40));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['choices'] != null && (data['choices'] as List).isNotEmpty) {
+          final content = data['choices'][0]['message']['content'];
+          if (content != null) {
+            try {
+              return jsonDecode(content) as Map<String, dynamic>;
+            } catch (e) {
+              print('Error parsing JSON from OpenRouter: $e');
+            }
+          }
+        }
+      } else {
+        print('Error OpenRouter API: ${response.statusCode} - ${response.body}');
+      }
+    } on TimeoutException catch (_) {
+      print('⏱️ Error: La solicitud a OpenRouter excedió el tiempo de espera (40s).');
+    } catch (e) {
+      print('Error consultando OpenRouter para explicación: $e');
     }
     return null;
   }

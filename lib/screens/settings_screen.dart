@@ -270,6 +270,30 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           
+          const SizedBox(height: 16),
+
+          // OpenRouter API Key
+          TextField(
+            controller: TextEditingController(text: SettingsService.instance.openRouterApiKey),
+            onChanged: (value) => SettingsService.instance.setOpenRouterApiKey(value),
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'OpenRouter API Key',
+              hintText: 'sk-or-...',
+              prefixIcon: Icon(Icons.cloud_circle_rounded, color: colorScheme.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colorScheme.outline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colorScheme.outlineVariant),
+              ),
+              filled: true,
+              fillColor: colorScheme.surface,
+            ),
+          ),
+          
           const SizedBox(height: 24),
           Text(
             'Prioridad de Explicación',
@@ -335,6 +359,7 @@ class SettingsScreen extends StatelessWidget {
     switch (source) {
       case 'gemini': return 'Gemini AI (Google)';
       case 'perplexity': return 'Perplexity AI';
+      case 'openrouter': return 'OpenRouter (Grok)';
       case 'local': return 'Diccionario Local (Offline)';
       case 'web': return 'Web (FreeDictionaryAPI)';
       default: return source;
@@ -345,6 +370,7 @@ class SettingsScreen extends StatelessWidget {
     switch (source) {
       case 'gemini': return Icons.auto_awesome_rounded;
       case 'perplexity': return Icons.psychology_rounded;
+      case 'openrouter': return Icons.cloud_circle_rounded;
       case 'local': return Icons.sd_storage_rounded;
       case 'web': return Icons.public_rounded;
       default: return Icons.help_outline_rounded;
