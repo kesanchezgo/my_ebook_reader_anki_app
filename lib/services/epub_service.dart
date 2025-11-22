@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:epubx/epubx.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:path/path.dart' as p;
+import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import '../models/book.dart';
 import 'local_storage_service.dart';
 
@@ -78,7 +80,10 @@ class EpubService {
     }
     // Si sigue vacío, lo dejamos vacío visualmente (no "Desconocido")
 
-    // 4. Crear objeto Book
+    // 5. Detectar idioma
+    final language = await _detectLanguage(epubBook);
+
+    // 6. Crear objeto Book
     return Book(
       id: uniqueId,
       title: title,
@@ -86,7 +91,54 @@ class EpubService {
       filePath: file.path,
       fileType: 'epub',
       addedDate: DateTime.now(),
+      language: language,
     );
+  }
+
+  /// Detecta el idioma del libro usando metadatos o ML Kit
+  Future<String> _detectLanguage(EpubBook epubBook) async {
+    // 1. Intentar obtener de metadatos
+    final metadataLang = epubBook.Schema?.Package?.Metadata?.Languages;
+    if (metadataLang != null && metadataLang.isNotEmpty) {
+      // Limpiar código (ej: "en-US" -> "en")
+      final cleanLang = metadataLang.first.split('-').first.toLowerCase();
+      if (cleanLang != 'und' && cleanLang.isNotEmpty) {
+        return cleanLang;
+      }
+    }
+
+    // 2. Si falla, usar ML Kit con una muestra de texto
+    try {
+      String sampleText = '';
+      
+      // Buscar texto en los primeros capítulos
+      if (epubBook.Chapters != null) {
+        for (var chapter in epubBook.Chapters!) {
+          if (chapter.HtmlContent != null) {
+            final doc = html_parser.parse(chapter.HtmlContent);
+            final text = doc.body?.text ?? '';
+            if (text.trim().length > 100) {
+              sampleText = text.trim().substring(0, min(text.trim().length, 500)); // Muestra de 500 chars
+              break;
+            }
+          }
+        }
+      }
+
+      if (sampleText.isNotEmpty) {
+        final languageIdentifier = LanguageIdentifier(confidenceThreshold: 0.5);
+        final String language = await languageIdentifier.identifyLanguage(sampleText);
+        await languageIdentifier.close();
+        
+        if (language != 'und') {
+          return language;
+        }
+      }
+    } catch (e) {
+      print('Error detectando idioma con ML Kit: $e');
+    }
+
+    return 'en'; // Default fallback
   }
 
   /// Parsea el archivo EPUB y devuelve una lista de objetos ChapterData.

@@ -97,6 +97,7 @@ class _BookCardState extends State<BookCard> {
                   children: [
                     _buildCover(theme),
                     _buildDeleteButton(theme),
+                    _buildLanguageBadge(theme),
                     if (widget.book.progress > 0)
                       _buildProgressBadge(theme),
                   ],
@@ -163,6 +164,55 @@ class _BookCardState extends State<BookCard> {
         ),
       ),
     );
+  }
+
+  Widget _buildLanguageBadge(ThemeData theme) {
+    if (widget.book.language == null) return const SizedBox.shrink();
+    
+    String flag = _getLanguageFlag(widget.book.language!);
+    
+    return Positioned(
+      top: 8,
+      left: 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+            ),
+            child: Text(
+              '$flag ${widget.book.language!.toUpperCase()}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getLanguageFlag(String languageCode) {
+    switch (languageCode.toLowerCase()) {
+      case 'en': return '🇺🇸';
+      case 'es': return '🇪🇸';
+      case 'fr': return '🇫🇷';
+      case 'de': return '🇩🇪';
+      case 'it': return '🇮🇹';
+      case 'pt': return '🇧🇷';
+      case 'ru': return '🇷🇺';
+      case 'zh': return '🇨🇳';
+      case 'ja': return '🇯🇵';
+      case 'ko': return '🇰🇷';
+      default: return '🌐';
+    }
   }
 
   Widget _buildCover(ThemeData theme) {

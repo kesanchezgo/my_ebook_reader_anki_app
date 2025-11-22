@@ -12,6 +12,7 @@ class Book extends Equatable {
   final int totalPages;
   final String? coverImage; // Path a la imagen de portada (opcional)
   final double progressPercentage; // Progreso global exacto (0.0 - 100.0)
+  final String? language; // Idioma detectado (ej: 'es', 'en')
 
   const Book({
     required this.id,
@@ -24,6 +25,7 @@ class Book extends Equatable {
     this.totalPages = 0,
     this.coverImage,
     this.progressPercentage = 0.0,
+    this.language,
   });
 
   /// Crea una copia del libro con los campos especificados modificados
@@ -38,6 +40,7 @@ class Book extends Equatable {
     int? totalPages,
     String? coverImage,
     double? progressPercentage,
+    String? language,
   }) {
     return Book(
       id: id ?? this.id,
@@ -50,6 +53,7 @@ class Book extends Equatable {
       totalPages: totalPages ?? this.totalPages,
       coverImage: coverImage ?? this.coverImage,
       progressPercentage: progressPercentage ?? this.progressPercentage,
+      language: language ?? this.language,
     );
   }
 
@@ -66,6 +70,7 @@ class Book extends Equatable {
       'totalPages': totalPages,
       'coverImage': coverImage,
       'progressPercentage': progressPercentage,
+      'language': language,
     };
   }
 
@@ -82,6 +87,7 @@ class Book extends Equatable {
       totalPages: json['totalPages'] as int? ?? 0,
       coverImage: json['coverImage'] as String?,
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0.0,
+      language: json['language'] as String?,
     );
   }
 
@@ -107,5 +113,6 @@ class Book extends Equatable {
         totalPages,
         coverImage,
         progressPercentage,
+        language,
       ];
 }
