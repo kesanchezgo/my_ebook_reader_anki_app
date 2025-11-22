@@ -151,6 +151,13 @@ class SettingsScreen extends StatelessWidget {
               code: 'en', 
               isSelected: currentCode == 'en'
             ),
+            const SizedBox(width: 12),
+            _buildLanguageOption(
+              context, 
+              label: 'Português', 
+              code: 'pt', 
+              isSelected: currentCode == 'pt'
+            ),
           ],
         );
       },

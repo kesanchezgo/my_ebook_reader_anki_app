@@ -1,0 +1,245 @@
+{
+  "@@locale": "pt",
+  "libraryTitle": "Minha Biblioteca",
+  "myVocabulary": "Meu Vocabulário",
+  "settings": "Configurações",
+  "bookImported": "Livro \"{title}\" importado",
+  "@bookImported": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryEmptyTitle": "Sua biblioteca está vazia",
+  "libraryEmptySubtitle": "Importe seus livros EPUB para começar a ler\ne criar cartões de vocabulário.",
+  "importEpubTooltip": "Importar livro (EPUB)",
+  "deleteBookTitle": "Excluir livro",
+  "deleteBookContent": "Tem certeza de que deseja excluir \"{title}\"?",
+  "@deleteBookContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteReadingData": "Excluir também dados de leitura",
+  "cancel": "Cancelar",
+  "delete": "Excluir",
+  "bookDeleted": "Livro excluído",
+  
+  "appearance": "APARÊNCIA",
+  "appLanguageTitle": "Idioma do Aplicativo",
+  "appLanguageSubtitle": "Selecione o idioma da interface.",
+  "themeTitle": "Tema do aplicativo",
+  "themeSubtitle": "Selecione o esquema de cores de sua preferência.",
+  "aiServices": "SERVIÇOS DE IA",
+  "apiCredentials": "Credenciais da API",
+  "apiCredentialsSubtitle": "Configure suas chaves para habilitar recursos de IA no dicionário e explicações.",
+  "apiKeyHint": "Cole sua chave de API aqui",
+  "smartDictionary": "DICIONÁRIO INTELIGENTE",
+  "definitionPriority": "Prioridade de Definição",
+  "definitionPrioritySubtitle": "Arraste para reordenar quais fontes consultar primeiro ao buscar uma palavra.",
+  "contextExplanation": "EXPLICAÇÃO DE CONTEXTO",
+  "explanationPriority": "Prioridade de Explicação",
+  "explanationPrioritySubtitle": "Arraste para reordenar qual IA consultar primeiro ao analisar o contexto.",
+  "information": "INFORMAÇÕES",
+  "version": "Versão",
+  "developer": "Desenvolvedor",
+  "active": "Ativo",
+  
+  "geminiAi": "Gemini AI (Google)",
+  "perplexityAi": "Perplexity AI",
+  "openRouter": "OpenRouter (Grok)",
+  "localDictionary": "Dicionário Local (Offline)",
+  "webDictionary": "Web (FreeDictionaryAPI)",
+
+  "purposeModalTitle": "Configure sua Leitura",
+  "purposeModalSubtitle": "Para oferecer a melhor experiência, precisamos saber como você planeja ler este livro.",
+  "readingMode": "Modo de Leitura",
+  "readOnlyMode": "Apenas Leitura",
+  "readOnlyModeDesc": "Aproveite o livro sem ferramentas de estudo.",
+  "nativeMode": "Melhorar Vocabulário",
+  "nativeModeDesc": "Buscar definições e sinônimos no mesmo idioma.",
+  "studyMode": "Aprender Idioma",
+  "studyModeDesc": "Traduzir palavras e frases para seu idioma nativo.",
+  "targetLanguage": "Idioma de Tradução",
+  "targetLanguageDesc": "Definições e explicações serão mostradas neste idioma.",
+  "startReading": "Começar Leitura",
+  "recommended": "Recomendado",
+  "detectedLanguage": "Idioma detectado: {language}",
+  "@detectedLanguage": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingBook": "Erro ao carregar livro: {error}",
+  "@errorLoadingBook": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingContent": "Não foi possível carregar o conteúdo do livro.",
+  "chapterProgress": "Capítulo {current} de {total} • {percent}%",
+  "@chapterProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "selectWordFirst": "Selecione uma palavra primeiro",
+  "restore": "Restaurar",
+  "textSize": "Tamanho do texto",
+  "typography": "Tipografia",
+  "alignment": "Alinhamento",
+  "justified": "Justificado",
+  "left": "Esquerda",
+  "confirmContext": "Confirmar Contexto",
+  "saveCard": "Salvar Cartão",
+  "loadingChapter": "Carregando capítulo...",
+  "selectingContext": "Selecionando contexto",
+  "selectContextInstruction": "Selecione o texto e toque em \"Confirmar Contexto\"",
+  "footnoteDevelopment": "Nota de rodapé: Navegação em desenvolvimento",
+  "noCardsToExport": "Não há cartões para exportar",
+  "exportingCards": "Exportando cartões...",
+  "cardsExported": "✓ {count} cartões exportados",
+  "@cardsExported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportError": "Erro ao exportar: {error}",
+  "@exportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCard": "Excluir cartão",
+  "deleteCardConfirmation": "Excluir \"{word}\"?",
+  "@deleteCardConfirmation": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDeleted": "Cartão excluído",
+  "analyzingContext": "Analisando contexto com IA...",
+  "explanationError": "Não foi possível obter a explicação. Verifique sua conexão.",
+  "connectionError": "Erro de conexão",
+  "contextAnalysis": "Análise de Contexto",
+  "source": "Fonte: {source}",
+  "@source": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "Fechar",
+  "originalContext": "CONTEXTO ORIGINAL",
+  "mainIdea": "Ideia Principal",
+  "keyVocabulary": "VOCABULÁRIO CHAVE",
+  "usageExamples": "Exemplos de Uso",
+  "culturalNote": "NOTA CULTURAL",
+  "myVocabulary": "Meu Vocabulário",
+  "dictionaries": "Dicionários",
+  "exportToCSV": "Exportar para CSV",
+  "searchWords": "Buscar palavras...",
+  "cards": "Cartões",
+  "books": "Livros",
+  "withAudio": "Com áudio",
+  "noCardsSaved": "Nenhum cartão salvo",
+  "noResultsFound": "Nenhum resultado encontrado",
+  "vocabularyEmptyState": "Selecione texto em seus livros para criar cartões e revisar vocabulário.",
+  "playWord": "Reproduzir palavra",
+  "definition": "Definição",
+  "example": "Exemplo",
+  "context": "Contexto",
+  "explainWithAI": "Explicar com IA",
+  "listenContext": "Ouvir contexto",
+  "today": "Hoje",
+  "yesterday": "Ontem",
+  "daysAgo": "Há {days} dias",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "definitionNotFound": "Definição não encontrada",
+  "searchError": "Erro na busca",
+  "savedToStudy": "Salvo para Estudo",
+  "errorGeneric": "Erro: {error}",
+  "@errorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createStudyCard": "Criar Cartão de Estudo",
+  "wordAlreadyExists": "Esta palavra já está na sua coleção.",
+  "word": "Palavra",
+  "exampleOptional": "Exemplo (Opcional)",
+  "selectFromBook": "Selecionar do livro",
+  "saveCard": "SALVAR CARTÃO",
+  "dictionarySettingsTitle": "Configurações de Dicionários",
+  "dictionaryLanguage": "Idioma do dicionário",
+  "dictionaryLanguageQuestion": "Em que idioma estão as definições?",
+  "englishLanguage": "🇬🇧 Inglês (EN)",
+  "spanishLanguage": "🇪🇸 Espanhol (ES)",
+  "importingDictionary": "Importando dicionário...",
+  "importedWordsCount": "Importadas {count} palavras",
+  "@importedWordsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importError": "Erro ao importar dicionário",
+  "invalidJsonError": "O arquivo não é um JSON válido",
+  "invalidJsonArrayError": "Formato incorreto: esperava-se um array JSON",
+  "clearDictionary": "Limpar Dicionário",
+  "clearDictionaryConfirmation": "Tem certeza? Todas as palavras salvas serão excluídas.",
+  "cancel": "Cancelar",
+  "delete": "Excluir",
+  "dictionaryCleared": "Dicionário limpo",
+  "howItWorks": "Como funciona",
+  "howItWorksDescription": "1. O dicionário local é consultado primeiro (rápido, offline)\n2. Se não encontrar, busca online\n3. Palavras encontradas online são salvas localmente",
+  "statistics": "Estatísticas",
+  "spanishDictionary": "🇪🇸 Dicionário Espanhol",
+  "englishDictionary": "🇬🇧 Dicionário Inglês",
+  "totalStored": "Total armazenado",
+  "diskSize": "Tamanho em disco",
+  "actions": "Ações",
+  "importDictionary": "Importar dicionário",
+  "jsonFormat": "Formato JSON monolíngue",
+  "dictionaryFormat": "Formato de dicionário",
+  "supportedFormats": "Formatos suportados:\n• SpanishBFF: (\"id\", \"lemma\", \"definition\")\n• Padrão: (\"word\", \"definition\", \"examples\")\n• Alternativo: (\"term\", \"meaning\")\n\nNota: Apenas dicionários monolíngues\n(palavra e definição no mesmo idioma)",
+  "unknownAuthor": "Autor Desconhecido",
+  "appTitle": "Meu Leitor",
+  "langSpanish": "🇪🇸 Espanhol",
+  "langEnglish": "🇺🇸 Inglês",
+  "langFrench": "🇫🇷 Francês",
+  "langGerman": "🇩🇪 Alemão",
+  "langItalian": "🇮🇹 Italiano",
+  "langPortuguese": "🇧🇷 Português"
+}
