@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../config/app_theme.dart';
 import '../services/settings_service.dart';
 
@@ -9,11 +10,12 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Configuración', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.settings, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         elevation: 0,
         backgroundColor: colorScheme.surface,
@@ -22,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildSectionHeader(context, 'Apariencia'),
+          _buildSectionHeader(context, l10n.appearance),
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
@@ -34,7 +36,7 @@ class SettingsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tema de la aplicación',
+                  l10n.appLanguageTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -43,7 +45,28 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Selecciona el esquema de colores que prefieras para la interfaz.',
+                  l10n.appLanguageSubtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildLanguageSelector(context),
+                const SizedBox(height: 24),
+                Divider(color: colorScheme.outlineVariant.withOpacity(0.2)),
+                const SizedBox(height: 24),
+                Text(
+                  l10n.themeTitle,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.themeSubtitle,
                   style: TextStyle(
                     fontSize: 13,
                     color: colorScheme.onSurfaceVariant,
@@ -57,25 +80,25 @@ class SettingsScreen extends StatelessWidget {
           
           const SizedBox(height: 32),
 
-          _buildSectionHeader(context, 'Servicios de IA'),
+          _buildSectionHeader(context, l10n.aiServices),
           const SizedBox(height: 16),
           _buildAiServicesSection(context),
           
           const SizedBox(height: 32),
 
-          _buildSectionHeader(context, 'Diccionario Inteligente'),
+          _buildSectionHeader(context, l10n.smartDictionary),
           const SizedBox(height: 16),
           _buildDictionaryPrioritySection(context),
           
           const SizedBox(height: 32),
 
-          _buildSectionHeader(context, 'Explicación de Contexto'),
+          _buildSectionHeader(context, l10n.contextExplanation),
           const SizedBox(height: 16),
           _buildContextPrioritySection(context),
           
           const SizedBox(height: 32),
           
-          _buildSectionHeader(context, 'Información'),
+          _buildSectionHeader(context, l10n.information),
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
@@ -86,14 +109,14 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _buildInfoTile(
                   context, 
-                  'Versión', 
+                  l10n.version, 
                   '1.0.0', 
                   Icons.info_outline_rounded
                 ),
                 Divider(height: 1, indent: 56, color: colorScheme.outlineVariant.withOpacity(0.2)),
                 _buildInfoTile(
                   context, 
-                  'Desarrollador', 
+                  l10n.developer, 
                   'Book Lector', 
                   Icons.code_rounded
                 ),
@@ -105,8 +128,74 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildLanguageSelector(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: SettingsService.instance.localeNotifier,
+      builder: (context, currentLocale, _) {
+        final currentCode = currentLocale?.languageCode;
+        
+        return Row(
+          children: [
+            _buildLanguageOption(
+              context, 
+              label: 'Español', 
+              code: 'es', 
+              isSelected: currentCode == 'es'
+            ),
+            const SizedBox(width: 12),
+            _buildLanguageOption(
+              context, 
+              label: 'English', 
+              code: 'en', 
+              isSelected: currentCode == 'en'
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption(BuildContext context, {
+    required String label,
+    required String code,
+    required bool isSelected,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: () => SettingsService.instance.setLocale(code),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAiServicesSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     
     return Container(
       decoration: BoxDecoration(
@@ -118,7 +207,7 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Credenciales de API',
+            l10n.apiCredentials,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -127,7 +216,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Configura tus claves para habilitar las funciones de IA en el diccionario y explicaciones.',
+            l10n.apiCredentialsSubtitle,
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -139,7 +228,7 @@ class SettingsScreen extends StatelessWidget {
           _buildApiKeyField(
             context,
             label: 'Gemini API Key',
-            hint: 'Pega tu API Key aquí',
+            hint: l10n.apiKeyHint,
             icon: Icons.auto_awesome_rounded,
             controller: TextEditingController(text: SettingsService.instance.geminiApiKey),
             onChanged: (val) => SettingsService.instance.setGeminiApiKey(val),
@@ -204,6 +293,7 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildDictionaryPrioritySection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -214,7 +304,7 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Prioridad de Definición',
+            l10n.definitionPriority,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -223,7 +313,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Arrastra para reordenar qué fuentes consultar primero al buscar una palabra.',
+            l10n.definitionPrioritySubtitle,
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -238,6 +328,7 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildContextPrioritySection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
@@ -248,7 +339,7 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Prioridad de Explicación',
+            l10n.explanationPriority,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -257,7 +348,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Arrastra para reordenar qué IA consultar primero al analizar el contexto.',
+            l10n.explanationPrioritySubtitle,
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -295,7 +386,7 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 key: ValueKey(source),
                 leading: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                title: Text(_getSourceName(source)),
+                title: Text(_getSourceName(context, source)),
                 trailing: Icon(_getSourceIcon(source), color: Theme.of(context).colorScheme.primary),
                 tileColor: Theme.of(context).colorScheme.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -332,7 +423,7 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 key: ValueKey(source),
                 leading: Icon(Icons.drag_handle_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                title: Text(_getSourceName(source)),
+                title: Text(_getSourceName(context, source)),
                 trailing: Icon(_getSourceIcon(source), color: Theme.of(context).colorScheme.primary),
                 tileColor: Theme.of(context).colorScheme.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -344,13 +435,14 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  String _getSourceName(String source) {
+  String _getSourceName(BuildContext context, String source) {
+    final l10n = AppLocalizations.of(context)!;
     switch (source) {
-      case 'gemini': return 'Gemini AI (Google)';
-      case 'perplexity': return 'Perplexity AI';
-      case 'openrouter': return 'OpenRouter (Grok)';
-      case 'local': return 'Diccionario Local (Offline)';
-      case 'web': return 'Web (FreeDictionaryAPI)';
+      case 'gemini': return l10n.geminiAi;
+      case 'perplexity': return l10n.perplexityAi;
+      case 'openrouter': return l10n.openRouter;
+      case 'local': return l10n.localDictionary;
+      case 'web': return l10n.webDictionary;
       default: return source;
     }
   }
@@ -404,6 +496,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, currentThemeId, _) {
         final isSelected = currentThemeId == theme.id;
         final colorScheme = Theme.of(context).colorScheme;
+        final l10n = AppLocalizations.of(context)!;
         
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -464,7 +557,7 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         if (isSelected)
                           Text(
-                            'Activo',
+                            l10n.active,
                             style: TextStyle(
                               fontSize: 12,
                               color: colorScheme.primary,

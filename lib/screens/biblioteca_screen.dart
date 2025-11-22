@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../services/local_storage_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
@@ -8,6 +9,7 @@ import '../bloc/biblioteca_state.dart';
 import '../models/book.dart';
 import '../widgets/book_card.dart';
 import '../widgets/premium_toast.dart';
+import '../widgets/purpose_modal.dart';
 import 'lector_screen.dart';
 import 'vocabulario_screen.dart';
 import 'settings_screen.dart';
@@ -20,11 +22,12 @@ class BibliotecaScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Mi Biblioteca', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.libraryTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         elevation: 0,
         backgroundColor: colorScheme.surface,
@@ -32,7 +35,7 @@ class BibliotecaScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.speaker_notes_rounded),
-            tooltip: 'Mi Vocabulario',
+            tooltip: l10n.myVocabulary,
             onPressed: () {
               Navigator.push(
                 context,
@@ -44,7 +47,7 @@ class BibliotecaScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings_rounded),
-            tooltip: 'Configuración',
+            tooltip: l10n.settings,
             onPressed: () {
               Navigator.push(
                 context,
@@ -67,7 +70,7 @@ class BibliotecaScreen extends StatelessWidget {
           if (state is BibliotecaError) {
             PremiumToast.show(context, state.message, isError: true);
           } else if (state is BibliotecaBookImported) {
-            PremiumToast.show(context, 'Libro "${state.book.title}" importado', isSuccess: true);
+            PremiumToast.show(context, l10n.bookImported(state.book.title), isSuccess: true);
           }
         },
         builder: (context, state) {
@@ -94,7 +97,7 @@ class BibliotecaScreen extends StatelessWidget {
         elevation: 4,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        tooltip: 'Importar libro (EPUB)',
+        tooltip: l10n.importEpubTooltip,
         child: const Icon(Icons.add_rounded),
       ),
     );
@@ -103,6 +106,7 @@ class BibliotecaScreen extends StatelessWidget {
   /// Widget para mostrar cuando no hay libros
   Widget _buildEmptyState(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -121,7 +125,7 @@ class BibliotecaScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Tu biblioteca está vacía',
+            l10n.libraryEmptyTitle,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -130,7 +134,7 @@ class BibliotecaScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Importa tus libros EPUB para empezar a leer\ny crear tarjetas de vocabulario.',
+            l10n.libraryEmptySubtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -169,6 +173,29 @@ class BibliotecaScreen extends StatelessWidget {
 
   /// Navega a la pantalla del lector
   void _openBook(BuildContext context, Book book) async {
+    // Verificar si el libro ya tiene configuración de propósito
+    if (book.studyMode == null) {
+      // Mostrar modal de propósito
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => PurposeModal(
+          book: book,
+          onConfigured: (configuredBook) {
+            Navigator.pop(context); // Cerrar modal
+            // Guardar configuración y abrir libro
+            context.read<BibliotecaBloc>().add(UpdateBook(configuredBook));
+            _navigateToReader(context, configuredBook);
+          },
+        ),
+      );
+    } else {
+      _navigateToReader(context, book);
+    }
+  }
+
+  void _navigateToReader(BuildContext context, Book book) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -190,6 +217,7 @@ class BibliotecaScreen extends StatelessWidget {
   /// Elimina un libro de la biblioteca
   void _deleteBook(BuildContext context, Book book) {
     bool deleteData = false;
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -199,13 +227,13 @@ class BibliotecaScreen extends StatelessWidget {
           return AlertDialog(
             backgroundColor: theme.colorScheme.surface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: const Text('Eliminar libro', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(l10n.deleteBookTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '¿Estás seguro de que quieres eliminar "${book.title}"?',
+                  l10n.deleteBookContent(book.title),
                   style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
@@ -231,7 +259,7 @@ class BibliotecaScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Eliminar también datos de lectura',
+                            l10n.deleteReadingData,
                             style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface),
                           ),
                         ),
@@ -245,7 +273,7 @@ class BibliotecaScreen extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () async {
@@ -270,7 +298,7 @@ class BibliotecaScreen extends StatelessWidget {
                   if (context.mounted) {
                     context.read<BibliotecaBloc>().add(DeleteBook(book.id));
                     Navigator.pop(context);
-                    PremiumToast.show(context, 'Libro eliminado', isSuccess: true);
+                    PremiumToast.show(context, l10n.bookDeleted, isSuccess: true);
                   }
                 },
                 style: FilledButton.styleFrom(
@@ -278,7 +306,7 @@ class BibliotecaScreen extends StatelessWidget {
                   foregroundColor: theme.colorScheme.onError,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Eliminar'),
+                child: Text(l10n.delete),
               ),
             ],
           );

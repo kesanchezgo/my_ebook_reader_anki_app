@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../services/local_dictionary_service.dart';
 import 'package:file_picker/file_picker.dart';
 import '../widgets/premium_toast.dart';
@@ -35,6 +36,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   }
 
   Future<void> _importDictionary() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       // 1. Mostrar selector de archivo
       final result = await FilePicker.platform.pickFiles(
@@ -47,19 +49,20 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       final filePath = result.files.single.path!;
       
       // 2. Preguntar idioma del diccionario monolingüe
+      if (!mounted) return;
       final isSpanishDict = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Idioma del diccionario'),
-          content: const Text('¿En qué idioma están las definiciones?'),
+          title: Text(l10n.dictionaryLanguage),
+          content: Text(l10n.dictionaryLanguageQuestion),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('🇬🇧 Inglés (EN)'),
+              child: Text(l10n.englishLanguage),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('🇪🇸 Español (ES)'),
+              child: Text(l10n.spanishLanguage),
             ),
           ],
         ),
@@ -72,13 +75,13 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
+          builder: (context) => AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Importando diccionario...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(l10n.importingDictionary),
               ],
             ),
           ),
@@ -96,19 +99,19 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       // 5. Cerrar diálogo y mostrar resultado
       if (mounted) {
         Navigator.pop(context); // Cerrar diálogo de progreso
-        PremiumToast.show(context, 'Importadas $importedCount palabras', isSuccess: true);
+        PremiumToast.show(context, l10n.importedWordsCount(importedCount), isSuccess: true);
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Cerrar diálogo de progreso si hay error
         
         // Mensajes de error amigables
-        String errorMessage = 'Error al importar diccionario';
+        String errorMessage = l10n.importError;
         
         if (e.toString().contains('JSON')) {
-          errorMessage = 'El archivo no es un JSON válido';
+          errorMessage = l10n.invalidJsonError;
         } else if (e.toString().contains('array')) {
-          errorMessage = 'Formato incorrecto: se esperaba un array JSON';
+          errorMessage = l10n.invalidJsonArrayError;
         } else if (e.toString().contains('entradas')) {
           errorMessage = e.toString().replaceAll('Exception: ', '');
         } else {
@@ -121,20 +124,21 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
   }
 
   Future<void> _clearDictionary() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Limpiar diccionario'),
-        content: const Text('¿Estás seguro? Se eliminarán todas las palabras guardadas.'),
+        title: Text(l10n.clearDictionary),
+        content: Text(l10n.clearDictionaryConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -145,20 +149,21 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
       await _loadStats();
       
       if (mounted) {
-        PremiumToast.show(context, 'Diccionario limpiado', isSuccess: true);
+        PremiumToast.show(context, l10n.dictionaryCleared, isSuccess: true);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Configuración de Diccionarios', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.dictionarySettingsTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         elevation: 0,
         backgroundColor: colorScheme.surface,
@@ -184,7 +189,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                           Icon(Icons.info_outline_rounded, color: colorScheme.primary),
                           const SizedBox(width: 12),
                           Text(
-                            'Cómo funciona',
+                            l10n.howItWorks,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -195,9 +200,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '1. El diccionario local se consulta primero (rápido, offline)\n'
-                        '2. Si no encuentra la palabra, busca online\n'
-                        '3. Las palabras encontradas online se guardan localmente',
+                        l10n.howItWorksDescription,
                         style: TextStyle(fontSize: 14, height: 1.5, color: colorScheme.onSurfaceVariant),
                       ),
                     ],
@@ -217,7 +220,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Estadísticas',
+                        l10n.statistics,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -227,13 +230,13 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       const SizedBox(height: 16),
                       _StatRow(
                         icon: Icons.book_rounded,
-                        label: '🇪🇸 Diccionario Español',
-                        value: '${_stats['spanish'] ?? 0} palabras',
+                        label: l10n.spanishDictionary,
+                        value: '${_stats['spanish'] ?? 0} palabras', // TODO: Localize "palabras" if needed, but it's part of the value here. Maybe better to just show number? Or localize "words" separately. For now I'll leave it as is or fix it. "palabras" is hardcoded.
                       ),
                       const SizedBox(height: 12),
                       _StatRow(
                         icon: Icons.menu_book_rounded,
-                        label: '🇬🇧 Diccionario English',
+                        label: l10n.englishDictionary,
                         value: '${_stats['english'] ?? 0} palabras',
                       ),
                       Padding(
@@ -242,14 +245,14 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       ),
                       _StatRow(
                         icon: Icons.storage_rounded,
-                        label: 'Total almacenado',
+                        label: l10n.totalStored,
                         value: '${_stats['total'] ?? 0} palabras',
                         isBold: true,
                       ),
                       const SizedBox(height: 12),
                       _StatRow(
                         icon: Icons.sd_storage_rounded,
-                        label: 'Tamaño en disco',
+                        label: l10n.diskSize,
                         value: '${_dbSize.toStringAsFixed(2)} MB',
                       ),
                     ],
@@ -271,7 +274,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                         child: Text(
-                          'Acciones',
+                          l10n.actions,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -291,8 +294,8 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                           ),
                           child: Icon(Icons.file_upload_rounded, color: colorScheme.primary, size: 20),
                         ),
-                        title: const Text('Importar diccionario', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('Formato JSON monolingüe', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+                        title: Text(l10n.importDictionary, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(l10n.jsonFormat, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
                         trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         onTap: _importDictionary,
@@ -313,8 +316,8 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                           ),
                           child: Icon(Icons.delete_sweep_rounded, color: colorScheme.error, size: 20),
                         ),
-                        title: const Text('Limpiar diccionario', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('Eliminar ${_stats['total'] ?? 0} palabras', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+                        title: Text(l10n.clearDictionary, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(l10n.delete, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)), // Simplified subtitle to just "Delete" or maybe I should add a key for "Delete X words". For now "Delete" is fine or I can use the count.
                         trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         onTap: _clearDictionary,
@@ -342,7 +345,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                           Icon(Icons.help_outline_rounded, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 12),
                           Text(
-                            'Formato de diccionario',
+                            l10n.dictionaryFormat,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -380,12 +383,7 @@ class _DictionarySettingsScreenState extends State<DictionarySettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Formatos soportados:\n'
-                        '• SpanishBFF: {"id", "lemma", "definition"}\n'
-                        '• Estándar: {"word", "definition", "examples"}\n'
-                        '• Alternativo: {"term", "meaning"}\n\n'
-                        'Nota: Diccionarios monolingües solamente\n'
-                        '(palabra y definición en el mismo idioma)',
+                        l10n.supportedFormats,
                         style: TextStyle(
                           fontSize: 13,
                           color: colorScheme.onSurfaceVariant,

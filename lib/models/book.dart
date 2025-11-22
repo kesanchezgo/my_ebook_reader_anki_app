@@ -13,6 +13,8 @@ class Book extends Equatable {
   final String? coverImage; // Path a la imagen de portada (opcional)
   final double progressPercentage; // Progreso global exacto (0.0 - 100.0)
   final String? language; // Idioma detectado (ej: 'es', 'en')
+  final String? studyMode; // 'read_only', 'native_vocab', 'learn_language'
+  final String? targetLanguage; // Idioma objetivo para traducción (ej: 'es')
 
   const Book({
     required this.id,
@@ -26,6 +28,8 @@ class Book extends Equatable {
     this.coverImage,
     this.progressPercentage = 0.0,
     this.language,
+    this.studyMode,
+    this.targetLanguage,
   });
 
   /// Crea una copia del libro con los campos especificados modificados
@@ -41,6 +45,8 @@ class Book extends Equatable {
     String? coverImage,
     double? progressPercentage,
     String? language,
+    String? studyMode,
+    String? targetLanguage,
   }) {
     return Book(
       id: id ?? this.id,
@@ -54,6 +60,8 @@ class Book extends Equatable {
       coverImage: coverImage ?? this.coverImage,
       progressPercentage: progressPercentage ?? this.progressPercentage,
       language: language ?? this.language,
+      studyMode: studyMode ?? this.studyMode,
+      targetLanguage: targetLanguage ?? this.targetLanguage,
     );
   }
 
@@ -71,6 +79,8 @@ class Book extends Equatable {
       'coverImage': coverImage,
       'progressPercentage': progressPercentage,
       'language': language,
+      'studyMode': studyMode,
+      'targetLanguage': targetLanguage,
     };
   }
 
@@ -88,6 +98,8 @@ class Book extends Equatable {
       coverImage: json['coverImage'] as String?,
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0.0,
       language: json['language'] as String?,
+      studyMode: json['studyMode'] as String?,
+      targetLanguage: json['targetLanguage'] as String?,
     );
   }
 
@@ -114,5 +126,7 @@ class Book extends Equatable {
         coverImage,
         progressPercentage,
         language,
+        studyMode,
+        targetLanguage,
       ];
 }

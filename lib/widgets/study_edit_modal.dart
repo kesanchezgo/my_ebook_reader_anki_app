@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/study_card.dart';
 import '../services/study_database_service.dart';
 import '../services/dictionary_service.dart';
@@ -87,6 +88,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
   }
 
   Future<void> _searchDictionary() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSearching = true;
       _definitionSource = null;
@@ -108,14 +110,14 @@ class _StudyEditModalState extends State<StudyEditModal> {
             // No mostramos toast si se encuentra, para una experiencia más limpia
           } else {
             // No rellenamos el campo con texto de error, lo dejamos vacío para que el usuario escriba
-            PremiumToast.show(context, 'Definición no encontrada', isWarning: true);
+            PremiumToast.show(context, l10n.definitionNotFound, isWarning: true);
           }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSearching = false);
-        PremiumToast.show(context, 'Error en la búsqueda', isError: true);
+        PremiumToast.show(context, l10n.searchError, isError: true);
       }
     }
   }
@@ -131,6 +133,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
   }
 
   Future<void> _saveCard() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -158,13 +161,13 @@ class _StudyEditModalState extends State<StudyEditModal> {
       
       if (mounted) {
         Navigator.pop(context);
-        PremiumToast.show(context, 'Guardado en Estudio', isSuccess: true);
+        PremiumToast.show(context, l10n.savedToStudy, isSuccess: true);
       }
     } catch (e) {
       debugPrint('Error saving card: $e');
       if (mounted) {
         setState(() => _isLoading = false);
-        PremiumToast.show(context, 'Error: $e', isError: true);
+        PremiumToast.show(context, l10n.errorGeneric(e.toString()), isError: true);
       }
     }
   }
@@ -183,6 +186,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -225,7 +229,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                   Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
                   const SizedBox(width: 12),
                   Text(
-                    'Crear Tarjeta de Estudio',
+                    l10n.createStudyCard,
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -251,7 +255,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Esta palabra ya está en tu colección.',
+                          l10n.wordAlreadyExists,
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onErrorContainer,
                             fontWeight: FontWeight.w500,
@@ -265,7 +269,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
               // Word Input
               _buildModernTextField(
                 controller: _wordController,
-                label: 'Palabra',
+                label: l10n.word,
                 icon: Icons.translate_rounded,
                 theme: theme,
               ),
@@ -280,7 +284,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                       Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
                       const SizedBox(width: 6),
                       Text(
-                        'Fuente: $_definitionSource',
+                        l10n.source(_definitionSource!),
                         style: textTheme.labelSmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -293,7 +297,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
               // Definition Input
               _buildModernTextField(
                 controller: _definitionController,
-                label: 'Definición',
+                label: l10n.definition,
                 icon: Icons.menu_book_rounded,
                 theme: theme,
                 maxLines: 3,
@@ -304,7 +308,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
               // Example Input (Optional)
               _buildModernTextField(
                 controller: _exampleController,
-                label: 'Ejemplo (Opcional)',
+                label: l10n.exampleOptional,
                 icon: Icons.lightbulb_outline_rounded,
                 theme: theme,
                 maxLines: 2,
@@ -314,7 +318,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
               // Context Input
               _buildModernTextField(
                 controller: _contextController,
-                label: 'Contexto',
+                label: l10n.context,
                 icon: Icons.format_quote_rounded,
                 theme: theme,
                 maxLines: 2,
@@ -326,7 +330,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                 child: TextButton.icon(
                   onPressed: _requestManualContext,
                   icon: const Icon(Icons.touch_app_rounded, size: 18),
-                  label: const Text('Seleccionar del libro'),
+                  label: Text(l10n.selectFromBook),
                   style: TextButton.styleFrom(
                     foregroundColor: colorScheme.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -359,7 +363,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                         )
                       )
                     : Text(
-                        'GUARDAR TARJETA', 
+                        l10n.saveCard, 
                         style: textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,

@@ -6,6 +6,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/book.dart';
 import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
@@ -204,6 +205,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final textTheme = theme.textTheme;
+        final l10n = AppLocalizations.of(context)!;
 
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -244,7 +246,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           Icon(Icons.tune_rounded, color: colorScheme.primary, size: 28),
                           const SizedBox(width: 12),
                           Text(
-                            'Ajustes',
+                            l10n.settings,
                             style: textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.onSurface,
@@ -261,7 +263,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         },
                         icon: Icon(Icons.refresh_rounded, size: 18, color: colorScheme.primary),
                         label: Text(
-                          'Restaurar', 
+                          l10n.restore, 
                           style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)
                         ),
                         style: TextButton.styleFrom(
@@ -276,7 +278,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   
                   // Tamaño de fuente
                   Text(
-                    'Tamaño de texto',
+                    l10n.textSize,
                     style: textTheme.titleMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -328,7 +330,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   
                   // Tipo de fuente
                   Text(
-                    'Tipografía',
+                    l10n.typography,
                     style: textTheme.titleMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -372,7 +374,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   
                   // Alineación
                   Text(
-                    'Alineación',
+                    l10n.alignment,
                     style: textTheme.titleMedium?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -389,7 +391,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       children: [
                         Expanded(
                           child: _buildAlignButton(
-                            'Justificado', 
+                            l10n.justified, 
                             TextAlign.justify, 
                             Icons.format_align_justify_rounded,
                             setModalState,
@@ -399,7 +401,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         const SizedBox(width: 4),
                         Expanded(
                           child: _buildAlignButton(
-                            'Izquierda', 
+                            l10n.left, 
                             TextAlign.left, 
                             Icons.format_align_left_rounded,
                             setModalState,
@@ -475,6 +477,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PopScope(
       canPop: _canPop,
       onPopInvoked: (didPop) {
@@ -494,9 +497,9 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return Center(child: Text('Error cargando libro: ${snapshot.error}', style: TextStyle(color: _textColor)));
+                  return Center(child: Text(l10n.errorLoadingBook(snapshot.error.toString()), style: TextStyle(color: _textColor)));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('No se pudo cargar el contenido del libro.', style: TextStyle(color: _textColor)));
+                  return Center(child: Text(l10n.errorLoadingContent, style: TextStyle(color: _textColor)));
                 }
 
                 final chapters = snapshot.data!;
@@ -560,7 +563,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       },
                       onSaveToStudy: (double scrollPercentage) async {
                         if (_currentSelection.isEmpty) {
-                          PremiumToast.show(context, 'Selecciona una palabra primero', isError: true);
+                          PremiumToast.show(context, l10n.selectWordFirst, isError: true);
                           return;
                         }
 
@@ -677,7 +680,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           builder: (context, snapshot) {
                             final totalChapters = snapshot.data?.length ?? 0;
                             return Text(
-                              'Capítulo ${_currentChapterIndex + 1} de $totalChapters • ${(_chapterProgress * 100).toInt()}%',
+                              l10n.chapterProgress(_currentChapterIndex + 1, totalChapters, (_chapterProgress * 100).toInt()),
                               style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, fontSize: 10),
                             );
                           }
@@ -734,7 +737,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Seleccionando contexto',
+                              l10n.selectingContext,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -742,7 +745,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Selecciona el texto y pulsa "Confirmar Contexto"',
+                              l10n.selectContextInstruction,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -756,7 +759,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         onPressed: () {
                           setState(() => _pendingStudyData = null);
                         },
-                        tooltip: 'Cancelar',
+                        tooltip: l10n.cancel,
                       ),
                     ],
                   ),
@@ -907,6 +910,7 @@ class _ChapterViewState extends State<_ChapterView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SelectionArea(
       onSelectionChanged: (selection) {
         widget.onSelectionChanged(selection?.plainText ?? '');
@@ -981,7 +985,7 @@ class _ChapterViewState extends State<_ChapterView> {
               widget.onSaveToStudy(currentProgress);
 
             },
-            label: widget.isSelectingContext ? 'Confirmar Contexto' : 'Guardar Tarjeta',
+            label: widget.isSelectingContext ? l10n.confirmContext : l10n.saveCard,
           ),
         );
 
@@ -1031,7 +1035,7 @@ class _ChapterViewState extends State<_ChapterView> {
                   },
                   onTapUrl: (url) async {
                      if (url.contains('#')) {
-                       PremiumToast.show(context, 'Nota al pie: Navegación en desarrollo');
+                       PremiumToast.show(context, l10n.footnoteDevelopment);
                        return true; 
                      }
                      return false; 
@@ -1053,7 +1057,7 @@ class _ChapterViewState extends State<_ChapterView> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Cargando capítulo...',
+                    l10n.loadingChapter,
                     style: TextStyle(
                       color: widget.textColor.withOpacity(0.5),
                       fontSize: 12,

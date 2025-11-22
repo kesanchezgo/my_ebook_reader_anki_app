@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/study_card.dart';
 import '../services/study_database_service.dart';
 import '../services/dictionary_service.dart';
@@ -64,8 +65,9 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   }
   
   Future<void> _exportCards() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_cards.isEmpty) {
-      PremiumToast.show(context, 'No hay tarjetas para exportar', isWarning: true);
+      PremiumToast.show(context, l10n.noCardsToExport, isWarning: true);
       return;
     }
     
@@ -74,12 +76,12 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
             children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text('Exportando tarjetas...'),
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Text(l10n.exportingCards),
             ],
           ),
         ),
@@ -93,7 +95,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       
       // Mostrar éxito
       if (mounted) {
-        PremiumToast.show(context, '✓ ${_cards.length} tarjetas exportadas', isSuccess: true);
+        PremiumToast.show(context, l10n.cardsExported(_cards.length), isSuccess: true);
       }
       
     } catch (e) {
@@ -102,26 +104,27 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       
       // Mostrar error
       if (mounted) {
-        PremiumToast.show(context, 'Error al exportar: $e', isError: true);
+        PremiumToast.show(context, l10n.exportError(e.toString()), isError: true);
       }
     }
   }
   
   Future<void> _deleteCard(StudyCard card) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar tarjeta'),
-        content: Text('¿Eliminar "${card.word}"?'),
+        title: Text(l10n.deleteCard),
+        content: Text(l10n.deleteCardConfirmation(card.word)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -132,7 +135,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       _loadCards();
       
       if (mounted) {
-        PremiumToast.show(context, 'Tarjeta eliminada', isSuccess: true);
+        PremiumToast.show(context, l10n.cardDeleted, isSuccess: true);
       }
     }
   }
@@ -146,6 +149,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   }
 
   Future<void> _explainContext(String contextText) async {
+    final l10n = AppLocalizations.of(context)!;
     // Mostrar loading
     showModalBottomSheet(
       context: context,
@@ -164,7 +168,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
               CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                'Analizando contexto con IA...',
+                l10n.analyzingContext,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
@@ -182,12 +186,12 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       if (explanation != null) {
         _showExplanationModal(explanation, contextText);
       } else {
-        PremiumToast.show(context, 'No se pudo obtener la explicación. Verifica tu conexión.', isWarning: true);
+        PremiumToast.show(context, l10n.explanationError, isWarning: true);
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        PremiumToast.show(context, 'Error de conexión', isError: true);
+        PremiumToast.show(context, l10n.connectionError, isError: true);
       }
     }
   }
@@ -205,6 +209,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
         snap: true,
         snapSizes: const [0.4], // Punto de anclaje "minimizado"
         builder: (_, controller) {
+          final l10n = AppLocalizations.of(context)!;
           return LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxHeight < 100) {
@@ -257,7 +262,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Análisis de Contexto',
+                          l10n.contextAnalysis,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -281,7 +286,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Fuente: ${data['source']}',
+                                  l10n.source(data['source']),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -296,7 +301,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
-                    tooltip: 'Cerrar',
+                    tooltip: l10n.close,
                     style: IconButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
                       padding: const EdgeInsets.all(8),
@@ -326,7 +331,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'CONTEXTO ORIGINAL',
+                            l10n.originalContext,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -352,7 +357,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                     // Idea Principal
                     _buildInfoCard(
                       context,
-                      title: 'Idea Principal',
+                      title: l10n.mainIdea,
                       icon: Icons.lightbulb_outline_rounded,
                       content: Text(
                         data['main_idea'] ?? '',
@@ -370,7 +375,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                         child: Text(
-                          'VOCABULARIO CLAVE',
+                          l10n.keyVocabulary,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -426,7 +431,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                     if (data['usage_examples'] != null && (data['usage_examples'] as List).isNotEmpty) ...[
                       _buildInfoCard(
                         context,
-                        title: 'Ejemplos de Uso',
+                        title: l10n.usageExamples,
                         icon: Icons.format_quote_rounded,
                         content: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,7 +483,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'NOTA CULTURAL',
+                                    l10n.culturalNote,
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -552,6 +557,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stats = _exportService.getExportStats(_cards);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -559,7 +565,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Mi Vocabulario', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.myVocabulary, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         elevation: 0,
         backgroundColor: colorScheme.surface,
@@ -567,7 +573,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.book_rounded),
-            tooltip: 'Diccionarios',
+            tooltip: l10n.dictionaries,
             onPressed: () {
               Navigator.push(
                 context,
@@ -579,7 +585,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.file_download_rounded),
-            tooltip: 'Exportar a CSV',
+            tooltip: l10n.exportToCSV,
             onPressed: _cards.isEmpty ? null : _exportCards,
           ),
         ],
@@ -596,7 +602,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
               ),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Buscar palabras...',
+                  hintText: l10n.searchWords,
                   hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                   prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary),
                   border: InputBorder.none,
@@ -624,19 +630,19 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                   children: [
                     _StatItem(
                       icon: Icons.style_rounded,
-                      label: 'Tarjetas',
+                      label: l10n.cards,
                       value: '${stats['total']}',
                     ),
                     Container(width: 1, height: 30, color: colorScheme.outlineVariant),
                     _StatItem(
                       icon: Icons.library_books_rounded,
-                      label: 'Libros',
+                      label: l10n.books,
                       value: '${stats['books']}',
                     ),
                     Container(width: 1, height: 30, color: colorScheme.outlineVariant),
                     _StatItem(
                       icon: Icons.volume_up_rounded,
-                      label: 'Con audio',
+                      label: l10n.withAudio,
                       value: '${stats['withAudio']}',
                     ),
                   ],
@@ -663,8 +669,8 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                             const SizedBox(height: 24),
                             Text(
                               _searchQuery.isEmpty
-                                  ? 'No hay tarjetas guardadas'
-                                  : 'No se encontraron resultados',
+                                  ? l10n.noCardsSaved
+                                  : l10n.noResultsFound,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -676,7 +682,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
-                                  'Selecciona texto en tus libros para crear tarjetas y repasar vocabulario.',
+                                  l10n.vocabularyEmptyState,
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: colorScheme.onSurfaceVariant.withOpacity(0.8),
@@ -772,6 +778,7 @@ class _CardTile extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -836,7 +843,7 @@ class _CardTile extends StatelessWidget {
             children: [
               IconButton(
                 icon: Icon(Icons.volume_up_rounded, size: 22, color: colorScheme.primary),
-                tooltip: 'Reproducir palabra',
+                tooltip: l10n.playWord,
                 onPressed: onPlayWord,
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.primary.withOpacity(0.1),
@@ -851,7 +858,7 @@ class _CardTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Definición completa
-                _buildSectionTitle(context, 'Definición'),
+                _buildSectionTitle(context, l10n.definition),
                 const SizedBox(height: 6),
                 Text(
                   card.definition,
@@ -864,7 +871,7 @@ class _CardTile extends StatelessWidget {
                 
                 if (card.example.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  _buildSectionTitle(context, 'Ejemplo'),
+                  _buildSectionTitle(context, l10n.example),
                   const SizedBox(height: 6),
                   Container(
                     width: double.infinity,
@@ -893,12 +900,12 @@ class _CardTile extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        _buildSectionTitle(context, 'Contexto'),
+                        _buildSectionTitle(context, l10n.context),
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: onExplainContext,
                           icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                          tooltip: 'Explicar con IA',
+                          tooltip: l10n.explainWithAI,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           style: IconButton.styleFrom(
@@ -911,7 +918,7 @@ class _CardTile extends StatelessWidget {
                     IconButton(
                       onPressed: onPlaySentence,
                       icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                      tooltip: 'Escuchar contexto',
+                      tooltip: l10n.listenContext,
                       style: IconButton.styleFrom(
                         backgroundColor: colorScheme.secondaryContainer.withOpacity(0.3),
                         foregroundColor: colorScheme.secondary,
@@ -970,7 +977,7 @@ class _CardTile extends StatelessWidget {
                               Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary.withOpacity(0.7)),
                               const SizedBox(width: 6),
                               Text(
-                                _formatDate(card.createdAt),
+                                _formatDate(context, card.createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: colorScheme.onSurfaceVariant,
@@ -985,7 +992,7 @@ class _CardTile extends StatelessWidget {
                     IconButton(
                       onPressed: onDelete,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      tooltip: 'Eliminar tarjeta',
+                      tooltip: l10n.deleteCard,
                       style: IconButton.styleFrom(
                         foregroundColor: colorScheme.onSurfaceVariant,
                         backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
@@ -1014,16 +1021,17 @@ class _CardTile extends StatelessWidget {
     );
   }
   
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(date);
     
     if (difference.inDays == 0) {
-      return 'Hoy';
+      return l10n.today;
     } else if (difference.inDays == 1) {
-      return 'Ayer';
+      return l10n.yesterday;
     } else if (difference.inDays < 7) {
-      return 'Hace ${difference.inDays} días';
+      return l10n.daysAgo(difference.inDays);
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

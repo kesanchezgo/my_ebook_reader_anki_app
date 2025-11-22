@@ -1,0 +1,245 @@
+{
+  "@@locale": "en",
+  "libraryTitle": "My Library",
+  "myVocabulary": "My Vocabulary",
+  "settings": "Settings",
+  "bookImported": "Book \"{title}\" imported",
+  "@bookImported": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryEmptyTitle": "Your library is empty",
+  "libraryEmptySubtitle": "Import your EPUB books to start reading\nand creating vocabulary cards.",
+  "importEpubTooltip": "Import book (EPUB)",
+  "deleteBookTitle": "Delete book",
+  "deleteBookContent": "Are you sure you want to delete \"{title}\"?",
+  "@deleteBookContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteReadingData": "Also delete reading data",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "bookDeleted": "Book deleted",
+  
+  "appearance": "APPEARANCE",
+  "appLanguageTitle": "App Language",
+  "appLanguageSubtitle": "Select the interface language.",
+  "themeTitle": "App Theme",
+  "themeSubtitle": "Select your preferred color scheme for the interface.",
+  "aiServices": "AI SERVICES",
+  "apiCredentials": "API Credentials",
+  "apiCredentialsSubtitle": "Configure your keys to enable AI features in dictionary and explanations.",
+  "apiKeyHint": "Paste your API Key here",
+  "smartDictionary": "SMART DICTIONARY",
+  "definitionPriority": "Definition Priority",
+  "definitionPrioritySubtitle": "Drag to reorder which sources to consult first when looking up a word.",
+  "contextExplanation": "CONTEXT EXPLANATION",
+  "explanationPriority": "Explanation Priority",
+  "explanationPrioritySubtitle": "Drag to reorder which AI to consult first when analyzing context.",
+  "information": "INFORMATION",
+  "version": "Version",
+  "developer": "Developer",
+  "active": "Active",
+  
+  "geminiAi": "Gemini AI (Google)",
+  "perplexityAi": "Perplexity AI",
+  "openRouter": "OpenRouter (Grok)",
+  "localDictionary": "Local Dictionary (Offline)",
+  "webDictionary": "Web (FreeDictionaryAPI)",
+
+  "purposeModalTitle": "Configure Reading",
+  "purposeModalSubtitle": "To provide the best experience, we need to know how you plan to read this book.",
+  "readingMode": "Reading Mode",
+  "readOnlyMode": "Read Only",
+  "readOnlyModeDesc": "Enjoy the book without study tools.",
+  "nativeMode": "Improve Vocabulary",
+  "nativeModeDesc": "Look up definitions and synonyms in the same language.",
+  "studyMode": "Learn Language",
+  "studyModeDesc": "Translate words and phrases to your native language.",
+  "targetLanguage": "Translation Language",
+  "targetLanguageDesc": "Definitions and explanations will be shown in this language.",
+  "startReading": "Start Reading",
+  "recommended": "Recommended",
+  "detectedLanguage": "Detected language: {language}",
+  "@detectedLanguage": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingBook": "Error loading book: {error}",
+  "@errorLoadingBook": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadingContent": "Could not load book content.",
+  "chapterProgress": "Chapter {current} of {total} • {percent}%",
+  "@chapterProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "selectWordFirst": "Select a word first",
+  "restore": "Restore",
+  "textSize": "Text Size",
+  "typography": "Typography",
+  "alignment": "Alignment",
+  "justified": "Justified",
+  "left": "Left",
+  "confirmContext": "Confirm Context",
+  "saveCard": "Save Card",
+  "loadingChapter": "Loading chapter...",
+  "selectingContext": "Selecting context",
+  "selectContextInstruction": "Select text and tap \"Confirm Context\"",
+  "footnoteDevelopment": "Footnote: Navigation in development",
+  "noCardsToExport": "No cards to export",
+  "exportingCards": "Exporting cards...",
+  "cardsExported": "✓ {count} cards exported",
+  "@cardsExported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportError": "Error exporting: {error}",
+  "@exportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCard": "Delete card",
+  "deleteCardConfirmation": "Delete \"{word}\"?",
+  "@deleteCardConfirmation": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDeleted": "Card deleted",
+  "analyzingContext": "Analyzing context with AI...",
+  "explanationError": "Could not get explanation. Check your connection.",
+  "connectionError": "Connection error",
+  "contextAnalysis": "Context Analysis",
+  "source": "Source: {source}",
+  "@source": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "Close",
+  "originalContext": "ORIGINAL CONTEXT",
+  "mainIdea": "Main Idea",
+  "keyVocabulary": "KEY VOCABULARY",
+  "usageExamples": "Usage Examples",
+  "culturalNote": "CULTURAL NOTE",
+  "myVocabulary": "My Vocabulary",
+  "dictionaries": "Dictionaries",
+  "exportToCSV": "Export to CSV",
+  "searchWords": "Search words...",
+  "cards": "Cards",
+  "books": "Books",
+  "withAudio": "With audio",
+  "noCardsSaved": "No cards saved",
+  "noResultsFound": "No results found",
+  "vocabularyEmptyState": "Select text in your books to create cards and review vocabulary.",
+  "playWord": "Play word",
+  "definition": "Definition",
+  "example": "Example",
+  "context": "Context",
+  "explainWithAI": "Explain with AI",
+  "listenContext": "Listen to context",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "daysAgo": "{days} days ago",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "definitionNotFound": "Definition not found",
+  "searchError": "Search error",
+  "savedToStudy": "Saved to Study",
+  "errorGeneric": "Error: {error}",
+  "@errorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createStudyCard": "Create Study Card",
+  "wordAlreadyExists": "This word is already in your collection.",
+  "word": "Word",
+  "exampleOptional": "Example (Optional)",
+  "selectFromBook": "Select from book",
+  "saveCard": "SAVE CARD",
+  "dictionarySettingsTitle": "Dictionary Settings",
+  "dictionaryLanguage": "Dictionary Language",
+  "dictionaryLanguageQuestion": "What language are the definitions in?",
+  "englishLanguage": "🇬🇧 English (EN)",
+  "spanishLanguage": "🇪🇸 Spanish (ES)",
+  "importingDictionary": "Importing dictionary...",
+  "importedWordsCount": "Imported {count} words",
+  "@importedWordsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importError": "Error importing dictionary",
+  "invalidJsonError": "The file is not a valid JSON",
+  "invalidJsonArrayError": "Incorrect format: JSON array expected",
+  "clearDictionary": "Clear Dictionary",
+  "clearDictionaryConfirmation": "Are you sure? All saved words will be deleted.",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "dictionaryCleared": "Dictionary cleared",
+  "howItWorks": "How it works",
+  "howItWorksDescription": "1. Local dictionary is checked first (fast, offline)\n2. If word not found, searches online\n3. Words found online are saved locally",
+  "statistics": "Statistics",
+  "spanishDictionary": "🇪🇸 Spanish Dictionary",
+  "englishDictionary": "🇬🇧 English Dictionary",
+  "totalStored": "Total stored",
+  "diskSize": "Disk size",
+  "actions": "Actions",
+  "importDictionary": "Import Dictionary",
+  "jsonFormat": "Monolingual JSON format",
+  "dictionaryFormat": "Dictionary Format",
+  "supportedFormats": "Supported formats:\n• SpanishBFF: (\"id\", \"lemma\", \"definition\")\n• Standard: (\"word\", \"definition\", \"examples\")\n• Alternative: (\"term\", \"meaning\")\n\nNote: Monolingual dictionaries only\n(word and definition in the same language)",
+  "unknownAuthor": "Unknown Author",
+  "appTitle": "My Reader",
+  "langSpanish": "🇪🇸 Spanish",
+  "langEnglish": "🇺🇸 English",
+  "langFrench": "🇫🇷 French",
+  "langGerman": "🇩🇪 German",
+  "langItalian": "🇮🇹 Italian",
+  "langPortuguese": "🇧🇷 Portuguese"
+}

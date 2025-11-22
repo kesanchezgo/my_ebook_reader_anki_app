@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_theme.dart';
@@ -12,11 +13,14 @@ class SettingsService {
   
   // Notifier for global theme changes
   final ValueNotifier<String> themeNotifier = ValueNotifier<String>(AppTheme.darkPremium);
+  // Notifier for global locale changes
+  final ValueNotifier<Locale?> localeNotifier = ValueNotifier<Locale?>(null);
 
   // Keys
   static const String _keyFontFamily = 'font_family';
   static const String _keyFontSize = 'font_size';
   static const String _keyThemeId = 'theme_id';
+  static const String _keyLocale = 'app_locale';
   static const String _keyTextAlign = 'text_align';
   static const String _keyGeminiApiKey = 'gemini_api_key';
   static const String _keyPerplexityApiKey = 'perplexity_api_key';
@@ -28,6 +32,7 @@ class SettingsService {
   static const String _defaultFontFamily = 'Merriweather';
   static const double _defaultFontSize = 18.0;
   static const String _defaultThemeId = AppTheme.darkPremium;
+  // static const String? _defaultLocale = null; // Removed in favor of dynamic default
   static const String _defaultTextAlign = 'justify';
   static const String _defaultGeminiApiKey = '';
   static const String _defaultPerplexityApiKey = '';
@@ -39,6 +44,7 @@ class SettingsService {
   String _fontFamily = _defaultFontFamily;
   double _fontSize = _defaultFontSize;
   String _themeId = _defaultThemeId;
+  String? _localeCode; // Initialized in loadSettings
   String _textAlign = _defaultTextAlign;
   String _geminiApiKey = _defaultGeminiApiKey;
   String _perplexityApiKey = _defaultPerplexityApiKey;
@@ -50,6 +56,7 @@ class SettingsService {
   String get fontFamily => _fontFamily;
   double get fontSize => _fontSize;
   String get themeId => _themeId;
+  Locale? get locale => _localeCode != null ? Locale(_localeCode!) : null;
   String get textAlign => _textAlign;
   String get geminiApiKey => _geminiApiKey;
   String get perplexityApiKey => _perplexityApiKey;
@@ -80,6 +87,27 @@ class SettingsService {
     _fontFamily = _prefs!.getString(_keyFontFamily) ?? _defaultFontFamily;
     _fontSize = _prefs!.getDouble(_keyFontSize) ?? _defaultFontSize;
     _themeId = _prefs!.getString(_keyThemeId) ?? _defaultThemeId;
+    
+    // Language Logic: Best Match or English
+    final String? savedLocale = _prefs!.getString(_keyLocale);
+    if (savedLocale != null) {
+      _localeCode = savedLocale;
+    } else {
+      // First run logic
+      try {
+        final String systemLocale = Platform.localeName.split('_')[0];
+        if (['es', 'en'].contains(systemLocale)) {
+          _localeCode = systemLocale;
+        } else {
+          _localeCode = 'en'; // Fallback to English
+        }
+        debugPrint('[LANG_DEBUG] System: $systemLocale, Selected: $_localeCode');
+      } catch (e) {
+        _localeCode = 'en';
+        debugPrint('[LANG_DEBUG] Error getting system locale: $e, Selected: $_localeCode');
+      }
+    }
+
     _textAlign = _prefs!.getString(_keyTextAlign) ?? _defaultTextAlign;
     _geminiApiKey = _prefs!.getString(_keyGeminiApiKey) ?? _defaultGeminiApiKey;
     _perplexityApiKey = _prefs!.getString(_keyPerplexityApiKey) ?? _defaultPerplexityApiKey;
@@ -125,8 +153,9 @@ class SettingsService {
       await _prefs!.setStringList(_keyDictionaryPriority, _dictionaryPriority);
     }
     
-    // Update notifier
+    // Update notifiers
     themeNotifier.value = _themeId;
+    localeNotifier.value = locale;
   }
 
   /// Guarda el tipo de fuente
@@ -151,6 +180,14 @@ class SettingsService {
       _prefs ??= await SharedPreferences.getInstance();
       await _prefs!.setString(_keyThemeId, value);
     }
+  }
+
+  /// Guarda el idioma de la app
+  Future<void> setLocale(String languageCode) async {
+    _localeCode = languageCode;
+    localeNotifier.value = locale; // Notify listeners
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_keyLocale, languageCode);
   }
 
   /// Guarda la alineación del texto

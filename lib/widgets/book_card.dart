@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/book.dart';
 import '../services/epub_service.dart';
 
@@ -66,6 +67,7 @@ class _BookCardState extends State<BookCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
@@ -128,7 +130,7 @@ class _BookCardState extends State<BookCard> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              widget.book.author.isNotEmpty ? widget.book.author : 'Autor Desconocido',
+                              widget.book.author.isNotEmpty ? widget.book.author : l10n.unknownAuthor,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
