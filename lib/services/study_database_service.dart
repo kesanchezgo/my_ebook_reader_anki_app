@@ -10,7 +10,7 @@ class StudyDatabaseService {
   // OR, I can migrate the file.
   // Let's keep the filename 'anki_cards.db' to preserve user data.
   static const String _databaseNameFile = 'anki_cards.db'; 
-  static const int _databaseVersion = 4; // Bump version
+  static const int _databaseVersion = 6; // Bump version to ensure schema check
   static const String _tableName = 'study_cards'; // New table name
 
   Database? _database;
@@ -26,6 +26,8 @@ class StudyDatabaseService {
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseNameFile);
+    
+    // debugPrint('Opening database at $path');
 
     return await openDatabase(
       path,
@@ -43,9 +45,6 @@ class StudyDatabaseService {
         word TEXT NOT NULL,
         type TEXT DEFAULT 'StudyCardType.enrichment',
         content TEXT,
-        definition TEXT, -- Deprecated, kept for legacy compatibility if needed
-        contexto TEXT, -- Deprecated
-        example TEXT, -- Deprecated
         fuente TEXT NOT NULL,
         audioPath TEXT,
         bookId TEXT NOT NULL,
@@ -63,38 +62,15 @@ class StudyDatabaseService {
 
   /// Actualiza la base de datos si cambia la versión
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
+    // Si la versión es menor a 6, recreamos la tabla para limpiar columnas antiguas
+    // ya que el usuario confirmó que no hay datos importantes.
+    if (oldVersion < 6) {
       try {
-        await db.execute('ALTER TABLE anki_cards ADD COLUMN contexto TEXT DEFAULT ""');
-        await db.execute('ALTER TABLE anki_cards ADD COLUMN fuente TEXT DEFAULT ""');
+        await db.execute('DROP TABLE IF EXISTS anki_cards');
+        await db.execute('DROP TABLE IF EXISTS study_cards');
+        await _onCreate(db, newVersion);
       } catch (e) {
-        // Ignorar si ya existen
-      }
-    }
-    
-    if (oldVersion < 3) {
-      try {
-        await db.execute('ALTER TABLE anki_cards ADD COLUMN example TEXT DEFAULT ""');
-      } catch (e) {
-        print('Error adding example column: $e');
-      }
-    }
-
-    if (oldVersion < 4) {
-      // Migración a StudyCard
-      try {
-        // 1. Renombrar tabla
-        await db.execute('ALTER TABLE anki_cards RENAME TO study_cards');
-      } catch (e) {
-        print('Error renaming table (might already be renamed): $e');
-      }
-
-      try {
-        // 2. Añadir nuevas columnas
-        await db.execute('ALTER TABLE study_cards ADD COLUMN type TEXT DEFAULT "StudyCardType.enrichment"');
-        await db.execute('ALTER TABLE study_cards ADD COLUMN content TEXT'); // Nullable
-      } catch (e) {
-        print('Error adding new columns: $e');
+        // debugPrint('Error resetting database: $e');
       }
     }
   }
@@ -102,9 +78,11 @@ class StudyDatabaseService {
   /// Inserta una nueva tarjeta
   Future<void> insertCard(StudyCard card) async {
     final db = await database;
+    final data = card.toJson();
+    // debugPrint('Inserting card: $data');
     await db.insert(
       _tableName,
-      card.toJson(),
+      data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }

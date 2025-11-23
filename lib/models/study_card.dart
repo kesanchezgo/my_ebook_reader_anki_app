@@ -92,8 +92,7 @@ class StudyCard {
       'createdAt': createdAt.toIso8601String(),
       'reviewCount': reviewCount,
       'lastReviewedAt': lastReviewedAt?.toIso8601String(),
-      // Campos redundantes para facilitar búsquedas SQL si no migramos completamente la lógica de búsqueda a JSON
-      'word': word, 
+      'word': word, // Mantenemos word para indexación y búsquedas SQL rápidas
     };
   }
 
