@@ -11,7 +11,6 @@ import '../widgets/book_card.dart';
 import '../widgets/premium_toast.dart';
 import '../widgets/purpose_modal.dart';
 import 'lector_screen.dart';
-import 'vocabulario_screen.dart';
 import 'settings_screen.dart';
 
 /// Pantalla principal que muestra la biblioteca de libros
@@ -34,18 +33,6 @@ class BibliotecaScreen extends StatelessWidget {
         foregroundColor: colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.speaker_notes_rounded),
-            tooltip: l10n.myVocabulary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const VocabularioScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.settings_rounded),
             tooltip: l10n.settings,
             onPressed: () {
@@ -55,12 +42,6 @@ class BibliotecaScreen extends StatelessWidget {
                   builder: (context) => const SettingsScreen(),
                 ),
               );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              context.read<BibliotecaBloc>().add(RefreshBiblioteca());
             },
           ),
         ],

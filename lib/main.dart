@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'screens/biblioteca_screen.dart';
+import 'screens/home_screen.dart';
 import 'bloc/biblioteca_bloc.dart';
 import 'bloc/biblioteca_event.dart';
 import 'services/local_storage_service.dart';
@@ -62,7 +62,7 @@ class MyApp extends StatelessWidget {
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const BibliotecaScreen(),
+                home: const HomeScreen(),
               );
             },
           );
