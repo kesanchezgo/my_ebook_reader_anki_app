@@ -499,6 +499,12 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   void _toggleToolsMenu() {
     setState(() {
       _isToolsMenuOpen = !_isToolsMenuOpen;
+      if (_isToolsMenuOpen) {
+        _fabOpacity = 1.0;
+        _fabOpacityTimer?.cancel();
+      } else {
+        _onUserInteraction();
+      }
     });
   }
 
@@ -886,7 +892,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           // Speed Dial Menu (Moderno)
           if (_isToolsMenuOpen)
             Positioned(
-              bottom: 80,
+              bottom: 160,
               right: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -925,16 +931,30 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             ),
         ],
       ),
-      floatingActionButton: AnimatedOpacity(
-        opacity: _fabOpacity,
-        duration: const Duration(milliseconds: 300),
-        child: FloatingActionButton(
-          onPressed: _toggleToolsMenu,
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: AnimatedRotation(
-            turns: _isToolsMenuOpen ? 0.125 : 0,
-            duration: const Duration(milliseconds: 200),
-            child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: AnimatedOpacity(
+          opacity: _fabOpacity,
+          duration: const Duration(milliseconds: 300),
+          child: MouseRegion(
+            onEnter: (_) {
+              _fabOpacityTimer?.cancel();
+              setState(() => _fabOpacity = 1.0);
+            },
+            onExit: (_) {
+              if (!_isToolsMenuOpen) {
+                _onUserInteraction();
+              }
+            },
+            child: FloatingActionButton(
+              onPressed: _toggleToolsMenu,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: AnimatedRotation(
+                turns: _isToolsMenuOpen ? 0.125 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
+              ),
+            ),
           ),
         ),
       ),
