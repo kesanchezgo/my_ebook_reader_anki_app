@@ -4,6 +4,7 @@ import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/study_card.dart';
 import '../services/study_database_service.dart';
 import '../services/dictionary_service.dart';
+import '../services/settings_service.dart';
 import '../services/tts_service.dart';
 import 'premium_toast.dart';
 
@@ -59,9 +60,12 @@ class _StudyEditModalState extends State<StudyEditModal> {
     _contextController.addListener(_validateForm);
     _definitionController.addListener(_validateForm);
     
-    if (widget.initialDefinition == null || widget.initialDefinition!.isEmpty) {
-      _searchDictionary();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialDefinition == null || widget.initialDefinition!.isEmpty) {
+        _searchDictionary();
+      }
+    });
+
     _checkDuplicate();
     _validateForm(); // Validación inicial
   }
@@ -89,6 +93,15 @@ class _StudyEditModalState extends State<StudyEditModal> {
 
   Future<void> _searchDictionary() async {
     final l10n = AppLocalizations.of(context)!;
+    
+    // Verificación rápida de API Key para diagnóstico
+    final priorities = SettingsService.instance.dictionaryPriority;
+    if (priorities.isNotEmpty && priorities.first == 'gemini') {
+       if (SettingsService.instance.geminiApiKey.isEmpty) {
+         PremiumToast.show(context, "Falta la API Key de Gemini. Revisa la configuración.", isWarning: true);
+       }
+    }
+
     setState(() {
       _isSearching = true;
       _definitionSource = null;

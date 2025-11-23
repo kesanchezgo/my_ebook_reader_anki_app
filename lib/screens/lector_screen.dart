@@ -11,7 +11,7 @@ import '../models/book.dart';
 import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/settings_service.dart';
-import '../services/context_service.dart';
+// import '../services/context_service.dart';
 import '../services/dictionary_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
@@ -67,7 +67,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   // Estado temporal para selección manual de contexto
   Map<String, dynamic>? _pendingStudyData;
   
-  final ContextService _contextService = ContextService();
+  // final ContextService _contextService = ContextService();
   final DictionaryService _dictionaryService = DictionaryService();
   
   ReaderMode _readerMode = ReaderMode.reading;
@@ -748,12 +748,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                            initialContext = _currentSelection;
                         } else if (_readerMode == ReaderMode.capturingWord) {
                            initialWord = _currentSelection;
-                           initialContext = _contextService.extractContext(
-                            word: _currentSelection, 
-                            fullText: chapters[index].plainText,
-                            mode: ContextMode.paragraph,
-                            scrollPercentage: scrollPercentage
-                          );
+                           // Contexto simplificado temporalmente
+                           initialContext = _currentSelection; 
                         } else if (_pendingStudyData != null) {
                           initialContext = _currentSelection;
                           initialWord = _pendingStudyData!['word'] ?? '';
@@ -762,12 +758,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           setState(() => _pendingStudyData = null);
                         } else {
                           initialWord = _currentSelection;
-                          initialContext = _contextService.extractContext(
-                            word: _currentSelection, 
-                            fullText: chapters[index].plainText,
-                            mode: ContextMode.paragraph,
-                            scrollPercentage: scrollPercentage
-                          );
+                          // Contexto simplificado temporalmente
+                          initialContext = _currentSelection;
                         }
 
                         final result = await showModalBottomSheet(
