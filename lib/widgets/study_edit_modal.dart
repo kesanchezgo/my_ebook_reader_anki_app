@@ -77,13 +77,13 @@ class _StudyEditModalState extends State<StudyEditModal> {
         'word': _wordController.text,
         'definition': _definitionController.text,
         'example': _exampleController.text,
+        'context': _contextController.text,
       }
     });
   }
 
   void _validateForm() {
     final isValid = _wordController.text.trim().isNotEmpty && 
-                    _contextController.text.trim().isNotEmpty &&
                     _definitionController.text.trim().isNotEmpty;
     
     if (isValid != _isFormValid) {
@@ -325,16 +325,18 @@ class _StudyEditModalState extends State<StudyEditModal> {
                 icon: Icons.lightbulb_outline_rounded,
                 theme: theme,
                 maxLines: 2,
+                isRequired: false,
               ),
               const SizedBox(height: 16),
   
               // Context Input
               _buildModernTextField(
                 controller: _contextController,
-                label: l10n.context,
+                label: '${l10n.context} (Opcional)',
                 icon: Icons.format_quote_rounded,
                 theme: theme,
                 maxLines: 2,
+                isRequired: false,
               ),
               
               // Manual Context Button
@@ -399,6 +401,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
     required ThemeData theme,
     int maxLines = 1,
     bool isLoading = false,
+    bool isRequired = true,
   }) {
     final colorScheme = theme.colorScheme;
     
@@ -432,6 +435,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
           floatingLabelBehavior: FloatingLabelBehavior.auto,
         ),
         validator: (value) {
+          if (!isRequired) return null;
           if (value == null || value.trim().isEmpty) return ''; // Validación visual manejada por el botón
           return null;
         },

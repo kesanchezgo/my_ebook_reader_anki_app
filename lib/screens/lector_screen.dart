@@ -504,13 +504,22 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         _readerMode = ReaderMode.reading;
         _showControls = true;
         _selectionClearToken++;
+        _pendingStudyData = null;
       });
       return;
     }
 
     if (_readerMode != ReaderMode.reading) {
+      if (_readerMode == ReaderMode.capturingContext && _pendingStudyData != null) {
+        _restorePendingCard();
+        return;
+      }
+
       _setReaderMode(ReaderMode.reading);
-      setState(() => _selectionClearToken++);
+      setState(() {
+        _selectionClearToken++;
+        _pendingStudyData = null;
+      });
       return;
     }
 
@@ -557,6 +566,40 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     
     if (message.isNotEmpty) {
       PremiumToast.show(context, message);
+    }
+  }
+
+  void _restorePendingCard() async {
+    _setReaderMode(ReaderMode.reading);
+    setState(() => _selectionClearToken++);
+
+    if (_pendingStudyData == null) return;
+
+    final data = _pendingStudyData!;
+    setState(() => _pendingStudyData = null);
+
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StudyEditModal(
+        word: data['word'] ?? '',
+        bookId: widget.book.id,
+        bookTitle: widget.book.title,
+        context: data['context'] ?? '',
+        initialDefinition: data['definition'] ?? '',
+        initialExample: data['example'] ?? '',
+      ),
+    );
+
+    if (result != null && result is Map && result['action'] == 'manual_context') {
+      setState(() {
+        _pendingStudyData = result['formData'];
+      });
+      _setReaderMode(ReaderMode.capturingContext);
     }
   }
 
@@ -680,6 +723,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
 
                            if (mounted) setState(() => _isAnalyzing = false);
                            
+
                            // Reset mode to clear banner
                            _setReaderMode(ReaderMode.reading);
 
@@ -707,6 +751,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                            setState(() => _isAnalyzing = true);
                            final result = await _dictionaryService.getSynonyms(_currentSelection);
                            
+
                            // Check if cancelled
                            if (!mounted || _readerMode == ReaderMode.reading) {
                              if (mounted) setState(() => _isAnalyzing = false);
@@ -744,22 +789,25 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         String initialDefinition = '';
                         String initialExample = '';
 
-                        if (_readerMode == ReaderMode.capturingContext) {
-                           initialContext = _currentSelection;
-                        } else if (_readerMode == ReaderMode.capturingWord) {
-                           initialWord = _currentSelection;
-                           // Contexto simplificado temporalmente
-                           initialContext = _currentSelection; 
-                        } else if (_pendingStudyData != null) {
+                        if (_pendingStudyData != null) {
                           initialContext = _currentSelection;
                           initialWord = _pendingStudyData!['word'] ?? '';
                           initialDefinition = _pendingStudyData!['definition'] ?? '';
                           initialExample = _pendingStudyData!['example'] ?? '';
                           setState(() => _pendingStudyData = null);
+                        } else if (_readerMode == ReaderMode.capturingContext) {
+                           initialContext = _currentSelection;
+                        } else if (_readerMode == ReaderMode.capturingWord) {
+                           initialWord = _currentSelection;
+                           initialContext = ''; 
                         } else {
                           initialWord = _currentSelection;
-                          // Contexto simplificado temporalmente
-                          initialContext = _currentSelection;
+                          initialContext = '';
+                        }
+
+                        // Ocultar banner antes de abrir el modal
+                        if (_readerMode != ReaderMode.reading) {
+                          _setReaderMode(ReaderMode.reading);
                         }
 
                         final result = await showModalBottomSheet(
@@ -773,7 +821,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             word: initialWord,
                             bookId: widget.book.id,
                             bookTitle: widget.book.title,
-                            context: initialContext.isNotEmpty ? initialContext : chapters[index].plainText,
+                            context: initialContext,
                             initialDefinition: initialDefinition,
                             initialExample: initialExample,
                           ),
@@ -783,10 +831,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           setState(() {
                             _pendingStudyData = result['formData'];
                           });
-                        } else {
-                          if (_readerMode != ReaderMode.reading) {
-                            _setReaderMode(ReaderMode.reading);
-                          }
+                          _setReaderMode(ReaderMode.capturingContext);
                         }
                       },
                       isSelectingContext: _pendingStudyData != null,
@@ -1336,6 +1381,7 @@ class _ChapterViewState extends State<_ChapterView> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
             child: NotificationListener<ScrollMetricsNotification>(
+
               onNotification: (metrics) {
                 widget.onUserInteraction();
                 if (_isLoading) {
