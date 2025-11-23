@@ -497,6 +497,19 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   }
 
   void _toggleToolsMenu() {
+    if (_isAnalyzing) {
+      setState(() {
+        _isAnalyzing = false;
+        _readerMode = ReaderMode.reading;
+      });
+      return;
+    }
+
+    if (_readerMode != ReaderMode.reading) {
+      _setReaderMode(ReaderMode.reading);
+      return;
+    }
+
     setState(() {
       _isToolsMenuOpen = !_isToolsMenuOpen;
       if (_isToolsMenuOpen) {
@@ -650,6 +663,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         if (_readerMode == ReaderMode.analyzing) {
                            setState(() => _isAnalyzing = true);
                            final result = await _dictionaryService.explainContext(_currentSelection);
+                           
+                           // Check if cancelled
+                           if (!mounted || _readerMode == ReaderMode.reading) {
+                             if (mounted) setState(() => _isAnalyzing = false);
+                             return;
+                           }
+
                            if (mounted) setState(() => _isAnalyzing = false);
                            
                            // Reset mode to clear banner
@@ -678,6 +698,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         if (_readerMode == ReaderMode.findingSynonyms) {
                            setState(() => _isAnalyzing = true);
                            final result = await _dictionaryService.getSynonyms(_currentSelection);
+                           
+                           // Check if cancelled
+                           if (!mounted || _readerMode == ReaderMode.reading) {
+                             if (mounted) setState(() => _isAnalyzing = false);
+                             return;
+                           }
+
                            if (mounted) setState(() => _isAnalyzing = false);
                            
 
@@ -934,7 +961,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: AnimatedOpacity(
-          opacity: _fabOpacity,
+          opacity: (_isAnalyzing || _readerMode != ReaderMode.reading || _isToolsMenuOpen) ? 1.0 : _fabOpacity,
           duration: const Duration(milliseconds: 300),
           child: MouseRegion(
             onEnter: (_) {
@@ -942,17 +969,33 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
               setState(() => _fabOpacity = 1.0);
             },
             onExit: (_) {
-              if (!_isToolsMenuOpen) {
+              if (!_isToolsMenuOpen && !_isAnalyzing && _readerMode == ReaderMode.reading) {
                 _onUserInteraction();
               }
             },
             child: FloatingActionButton(
               onPressed: _toggleToolsMenu,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: AnimatedRotation(
-                turns: _isToolsMenuOpen ? 0.125 : 0,
+              backgroundColor: (_isAnalyzing || _readerMode != ReaderMode.reading) 
+                  ? Theme.of(context).colorScheme.errorContainer
+                  : Theme.of(context).colorScheme.primary,
+              foregroundColor: (_isAnalyzing || _readerMode != ReaderMode.reading)
+                  ? Theme.of(context).colorScheme.onErrorContainer
+                  : Theme.of(context).colorScheme.onPrimary,
+              child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(scale: animation, child: child);
+                },
+                child: (_isAnalyzing || _readerMode != ReaderMode.reading)
+                    ? const Icon(Icons.close_rounded, key: ValueKey('close'))
+                    : AnimatedRotation(
+                        turns: _isToolsMenuOpen ? 0.125 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          _isToolsMenuOpen ? Icons.add : Icons.auto_fix_high,
+                          key: const ValueKey('menu'),
+                        ),
+                      ),
               ),
             ),
           ),
