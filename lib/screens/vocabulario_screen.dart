@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/study_card.dart';
@@ -25,15 +26,18 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   List<StudyCard> _cards = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  StreamSubscription? _dbSubscription;
   
   @override
   void initState() {
     super.initState();
     _loadCards();
+    _dbSubscription = StudyDatabaseService.onDatabaseChanged.listen((_) => _loadCards());
   }
   
   @override
   void dispose() {
+    _dbSubscription?.cancel();
     _ttsService.dispose();
     super.dispose();
   }

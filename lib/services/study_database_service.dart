@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/study_card.dart';
@@ -12,6 +13,9 @@ class StudyDatabaseService {
   static const String _databaseNameFile = 'anki_cards.db'; 
   static const int _databaseVersion = 6; // Bump version to ensure schema check
   static const String _tableName = 'study_cards'; // New table name
+
+  static final StreamController<void> _dbChangeController = StreamController<void>.broadcast();
+  static Stream<void> get onDatabaseChanged => _dbChangeController.stream;
 
   Database? _database;
 
@@ -85,6 +89,7 @@ class StudyDatabaseService {
       data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    _dbChangeController.add(null);
   }
 
   /// Verifica si una palabra ya existe en el vocabulario del libro actual
@@ -155,6 +160,7 @@ class StudyDatabaseService {
       where: 'id = ?',
       whereArgs: [card.id],
     );
+    _dbChangeController.add(null);
   }
 
   /// Elimina una tarjeta
@@ -165,6 +171,7 @@ class StudyDatabaseService {
       where: 'id = ?',
       whereArgs: [cardId],
     );
+    _dbChangeController.add(null);
   }
 
   /// Obtiene el número total de tarjetas
