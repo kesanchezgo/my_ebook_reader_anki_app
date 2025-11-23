@@ -77,6 +77,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   // FAB Opacity
   double _fabOpacity = 1.0;
   Timer? _fabOpacityTimer;
+  int _selectionClearToken = 0;
 
   void _onUserInteraction() {
     if (_fabOpacity != 1.0) {
@@ -501,12 +502,15 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       setState(() {
         _isAnalyzing = false;
         _readerMode = ReaderMode.reading;
+        _showControls = true;
+        _selectionClearToken++;
       });
       return;
     }
 
     if (_readerMode != ReaderMode.reading) {
       _setReaderMode(ReaderMode.reading);
+      setState(() => _selectionClearToken++);
       return;
     }
 
@@ -528,6 +532,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       _isToolsMenuOpen = false;
       if (mode != ReaderMode.reading) {
         _showControls = false;
+      } else {
+        _showControls = true;
       }
     });
     
@@ -614,6 +620,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   },
                   itemBuilder: (context, index) {
                     return _ChapterView(
+                      key: ValueKey('chapter_$index'),
                       chapter: chapters[index],
                       bookId: widget.book.id,
                       chapterIndex: index,
@@ -623,6 +630,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       textAlign: _textAlign,
                       readerMode: _readerMode,
                       onUserInteraction: _onUserInteraction,
+                      selectionClearToken: _selectionClearToken,
                       onSelectionChanged: (selection) {
                         setState(() => _currentSelection = selection);
                       },
@@ -860,11 +868,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       ),
                     ),
                     if (!_isAnalyzing)
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _setReaderMode(ReaderMode.reading),
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                      const SizedBox.shrink(),
                   ],
                 ),
               ),
@@ -975,12 +979,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             },
             child: FloatingActionButton(
               onPressed: _toggleToolsMenu,
-              backgroundColor: (_isAnalyzing || _readerMode != ReaderMode.reading) 
-                  ? Theme.of(context).colorScheme.errorContainer
-                  : Theme.of(context).colorScheme.primary,
-              foregroundColor: (_isAnalyzing || _readerMode != ReaderMode.reading)
-                  ? Theme.of(context).colorScheme.onErrorContainer
-                  : Theme.of(context).colorScheme.onPrimary,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 transitionBuilder: (Widget child, Animation<double> animation) {
@@ -1100,8 +1100,10 @@ class _ChapterView extends StatefulWidget {
   final Function(double) onSaveToStudy;
   final VoidCallback onUserInteraction;
   final bool isSelectingContext;
+  final int selectionClearToken;
 
   const _ChapterView({
+    super.key,
     required this.chapter,
     required this.bookId,
     required this.chapterIndex,
@@ -1115,6 +1117,7 @@ class _ChapterView extends StatefulWidget {
     required this.onSaveToStudy,
     required this.onUserInteraction,
     this.isSelectingContext = false,
+    this.selectionClearToken = 0,
   });
 
   @override
@@ -1126,6 +1129,15 @@ class _ChapterViewState extends State<_ChapterView> {
   Timer? _scrollSaveTimer;
   bool _isLoading = true; // Estado de carga para evitar saltos visuales
   double _savedOffset = 0.0;
+  final FocusNode _selectionFocusNode = FocusNode();
+
+  @override
+  void didUpdateWidget(_ChapterView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectionClearToken != oldWidget.selectionClearToken) {
+      _selectionFocusNode.unfocus();
+    }
+  }
 
   @override
   void initState() {
@@ -1155,6 +1167,7 @@ class _ChapterViewState extends State<_ChapterView> {
 
   @override
   void dispose() {
+    _selectionFocusNode.dispose();
     _scrollSaveTimer?.cancel();
     _saveScrollPosition();
     _scrollController.removeListener(_onScroll);
@@ -1244,7 +1257,9 @@ class _ChapterViewState extends State<_ChapterView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
     return SelectionArea(
+      focusNode: _selectionFocusNode,
       onSelectionChanged: (selection) {
         widget.onSelectionChanged(selection?.plainText ?? '');
       },
