@@ -17,6 +17,14 @@ import '../bloc/biblioteca_event.dart';
 import '../widgets/study_edit_modal.dart';
 import '../widgets/premium_toast.dart';
 
+enum ReaderMode {
+  reading,
+  capturingWord,
+  capturingContext,
+  analyzing,
+  findingSynonyms
+}
+
 class LectorScreen extends StatefulWidget {
   final Book book;
 
@@ -58,6 +66,9 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   Map<String, dynamic>? _pendingStudyData;
   
   final ContextService _contextService = ContextService();
+  
+  ReaderMode _readerMode = ReaderMode.reading;
+  bool _isToolsMenuOpen = false;
 
   @override
   void initState() {
@@ -465,6 +476,82 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     );
   }
 
+  void _toggleToolsMenu() {
+    setState(() {
+      _isToolsMenuOpen = !_isToolsMenuOpen;
+    });
+  }
+
+  void _setReaderMode(ReaderMode mode) {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _readerMode = mode;
+      _isToolsMenuOpen = false;
+      _showControls = false;
+    });
+    
+    String message = '';
+    switch (mode) {
+      case ReaderMode.capturingWord:
+        message = l10n.promptSelectWord;
+        break;
+      case ReaderMode.capturingContext:
+        message = l10n.promptSelectContext;
+        break;
+      case ReaderMode.analyzing:
+        message = l10n.promptSelectText;
+        break;
+      case ReaderMode.findingSynonyms:
+        message = l10n.promptSelectWord;
+        break;
+      case ReaderMode.reading:
+        break;
+    }
+    
+    if (message.isNotEmpty) {
+      PremiumToast.show(context, message);
+    }
+  }
+
+  Widget _buildToolButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -530,6 +617,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       fontFamily: _fontFamily,
                       textColor: _textColor,
                       textAlign: _textAlign,
+                      readerMode: _readerMode,
                       onSelectionChanged: (selection) {
                         setState(() => _currentSelection = selection);
                       },
@@ -567,23 +655,41 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           return;
                         }
 
-                        String initialContext;
-                        String initialWord = _currentSelection;
+                        if (_readerMode == ReaderMode.analyzing) {
+                           PremiumToast.show(context, "Analyzing: $_currentSelection");
+                           _setReaderMode(ReaderMode.reading);
+                           return;
+                        }
+                        
+                        if (_readerMode == ReaderMode.findingSynonyms) {
+                           PremiumToast.show(context, "Synonyms for: $_currentSelection");
+                           _setReaderMode(ReaderMode.reading);
+                           return;
+                        }
+
+                        String initialContext = '';
+                        String initialWord = '';
                         String initialDefinition = '';
                         String initialExample = '';
 
-                        if (_pendingStudyData != null) {
-                          // Modo selección manual: la selección actual ES el contexto
+                        if (_readerMode == ReaderMode.capturingContext) {
+                           initialContext = _currentSelection;
+                        } else if (_readerMode == ReaderMode.capturingWord) {
+                           initialWord = _currentSelection;
+                           initialContext = _contextService.extractContext(
+                            word: _currentSelection, 
+                            fullText: chapters[index].plainText,
+                            mode: ContextMode.paragraph,
+                            scrollPercentage: scrollPercentage
+                          );
+                        } else if (_pendingStudyData != null) {
                           initialContext = _currentSelection;
-                          // Restaurar datos previos
                           initialWord = _pendingStudyData!['word'] ?? '';
                           initialDefinition = _pendingStudyData!['definition'] ?? '';
                           initialExample = _pendingStudyData!['example'] ?? '';
-                          // Limpiar estado pendiente
                           setState(() => _pendingStudyData = null);
                         } else {
-                          // Modo normal: extracción automática usando ContextService
-                          // TODO: Permitir configurar ContextMode desde ajustes del libro
+                          initialWord = _currentSelection;
                           initialContext = _contextService.extractContext(
                             word: _currentSelection, 
                             fullText: chapters[index].plainText,
@@ -609,11 +715,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                           ),
                         );
 
-                        // Manejar solicitud de contexto manual
                         if (result != null && result is Map && result['action'] == 'manual_context') {
                           setState(() {
                             _pendingStudyData = result['formData'];
                           });
+                        } else {
+                          if (_readerMode != ReaderMode.reading) {
+                            _setReaderMode(ReaderMode.reading);
+                          }
                         }
                       },
                       isSelectingContext: _pendingStudyData != null,
@@ -766,9 +875,59 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 ),
               ),
             ),
+
+          // Tools Menu Overlay
+          if (_isToolsMenuOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _toggleToolsMenu,
+                child: Container(
+                  color: Colors.black54,
+                  alignment: Alignment.bottomRight,
+                  padding: const EdgeInsets.only(bottom: 100, right: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildToolButton(
+                        icon: Icons.text_fields,
+                        label: l10n.readerToolCapture,
+                        onTap: () => _setReaderMode(ReaderMode.capturingWord),
+                      ),
+                      _buildToolButton(
+                        icon: Icons.format_quote,
+                        label: l10n.context,
+                        onTap: () => _setReaderMode(ReaderMode.capturingContext),
+                      ),
+                      _buildToolButton(
+                        icon: Icons.analytics,
+                        label: l10n.readerToolAnalyze,
+                        onTap: () => _setReaderMode(ReaderMode.analyzing),
+                      ),
+                      _buildToolButton(
+                        icon: Icons.compare_arrows,
+                        label: l10n.readerToolSynonyms,
+                        onTap: () => _setReaderMode(ReaderMode.findingSynonyms),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // FAB
+          Positioned(
+            bottom: 32,
+            right: 24,
+            child: FloatingActionButton(
+              onPressed: _toggleToolsMenu,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: Icon(_isToolsMenuOpen ? Icons.close : Icons.build),
+            ),
+          ),
         ],
       ),
-    ),
+      ),
     );
   }
 }
@@ -781,6 +940,7 @@ class _ChapterView extends StatefulWidget {
   final String fontFamily;
   final Color textColor;
   final TextAlign textAlign;
+  final ReaderMode readerMode;
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
   final Function(double) onSaveToStudy;
@@ -794,6 +954,7 @@ class _ChapterView extends StatefulWidget {
     required this.fontFamily,
     required this.textColor,
     required this.textAlign,
+    required this.readerMode,
     required this.onSelectionChanged,
     required this.onProgressChanged,
     required this.onSaveToStudy,
@@ -882,6 +1043,21 @@ class _ChapterViewState extends State<_ChapterView> {
     }
   }
 
+  String _getLabelForMode(ReaderMode mode, AppLocalizations l10n) {
+    switch (mode) {
+      case ReaderMode.capturingWord:
+        return l10n.actionConfirmWord;
+      case ReaderMode.capturingContext:
+        return l10n.actionConfirmContext;
+      case ReaderMode.analyzing:
+        return l10n.actionAnalyze;
+      case ReaderMode.findingSynonyms:
+        return l10n.actionSynonyms;
+      case ReaderMode.reading:
+        return l10n.saveCard;
+    }
+  }
+
   void _updateProgress() {
     if (!_scrollController.hasClients) return;
     
@@ -964,13 +1140,7 @@ class _ChapterViewState extends State<_ChapterView> {
                   
                   currentProgress = currentProgress.clamp(0.0, 1.0);
                   
-                  // DEBUG (temporal - eliminar después de probar)
-                  debugPrint("=== DEBUG POSICIÓN ===");
-                  debugPrint("Scroll: ${scrollOffset.toInt()}/${maxScroll.toInt()}");
-                  debugPrint("ScrollProgress: ${(scrollProgress * 100).toInt()}%");
-                  debugPrint("TouchY relativo: ${(touchYRelative * 100).toInt()}%");
-                  debugPrint("Progress final: ${(currentProgress * 100).toInt()}%");
-                  debugPrint("=====================");
+
                   
                 } catch (e) {
                   debugPrint("Error calculando posición: $e");
@@ -985,7 +1155,7 @@ class _ChapterViewState extends State<_ChapterView> {
               widget.onSaveToStudy(currentProgress);
 
             },
-            label: widget.isSelectingContext ? l10n.confirmContext : l10n.saveCard,
+            label: _getLabelForMode(widget.readerMode, l10n),
           ),
         );
 

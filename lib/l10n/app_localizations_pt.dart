@@ -483,4 +483,34 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get langPortuguese => '🇧🇷 Português';
+
+  @override
+  String get readerToolCapture => 'Capturar Cartão';
+
+  @override
+  String get readerToolAnalyze => 'Analisar Texto';
+
+  @override
+  String get readerToolSynonyms => 'Ver Sinônimos';
+
+  @override
+  String get promptSelectWord => 'Selecione a palavra para aprender';
+
+  @override
+  String get promptSelectContext => 'Agora selecione o contexto';
+
+  @override
+  String get promptSelectText => 'Selecione o texto para analisar';
+
+  @override
+  String get actionConfirmWord => 'Confirmar Palavra';
+
+  @override
+  String get actionConfirmContext => 'Confirmar Contexto';
+
+  @override
+  String get actionAnalyze => 'Analisar';
+
+  @override
+  String get actionSynonyms => 'Buscar Sinônimos';
 }

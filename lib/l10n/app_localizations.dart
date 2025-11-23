@@ -969,6 +969,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'🇧🇷 Portugués'**
   String get langPortuguese;
+
+  /// No description provided for @readerToolCapture.
+  ///
+  /// In es, this message translates to:
+  /// **'Capturar Ficha'**
+  String get readerToolCapture;
+
+  /// No description provided for @readerToolAnalyze.
+  ///
+  /// In es, this message translates to:
+  /// **'Analizar Texto'**
+  String get readerToolAnalyze;
+
+  /// No description provided for @readerToolSynonyms.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver Sinónimos'**
+  String get readerToolSynonyms;
+
+  /// No description provided for @promptSelectWord.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona la palabra a aprender'**
+  String get promptSelectWord;
+
+  /// No description provided for @promptSelectContext.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora selecciona el contexto'**
+  String get promptSelectContext;
+
+  /// No description provided for @promptSelectText.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona el texto a analizar'**
+  String get promptSelectText;
+
+  /// No description provided for @actionConfirmWord.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar Palabra'**
+  String get actionConfirmWord;
+
+  /// No description provided for @actionConfirmContext.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar Contexto'**
+  String get actionConfirmContext;
+
+  /// No description provided for @actionAnalyze.
+  ///
+  /// In es, this message translates to:
+  /// **'Analizar'**
+  String get actionAnalyze;
+
+  /// No description provided for @actionSynonyms.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar Sinónimos'**
+  String get actionSynonyms;
 }
 
 class _AppLocalizationsDelegate

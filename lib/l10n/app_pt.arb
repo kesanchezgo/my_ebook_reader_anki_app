@@ -241,5 +241,15 @@
   "langFrench": "🇫🇷 Francês",
   "langGerman": "🇩🇪 Alemão",
   "langItalian": "🇮🇹 Italiano",
-  "langPortuguese": "🇧🇷 Português"
+  "langPortuguese": "🇧🇷 Português",
+  "readerToolCapture": "Capturar Cartão",
+  "readerToolAnalyze": "Analisar Texto",
+  "readerToolSynonyms": "Ver Sinônimos",
+  "promptSelectWord": "Selecione a palavra para aprender",
+  "promptSelectContext": "Agora selecione o contexto",
+  "promptSelectText": "Selecione o texto para analisar",
+  "actionConfirmWord": "Confirmar Palavra",
+  "actionConfirmContext": "Confirmar Contexto",
+  "actionAnalyze": "Analisar",
+  "actionSynonyms": "Buscar Sinônimos"
 }
