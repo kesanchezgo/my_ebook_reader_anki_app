@@ -1267,67 +1267,69 @@ class _ChapterViewState extends State<_ChapterView> {
         final List<ContextMenuButtonItem> buttonItems =
             editableTextState.contextMenuButtonItems;
         
-        buttonItems.insert(
-          0,
-          ContextMenuButtonItem(
-            onPressed: () {
-              editableTextState.hideToolbar();
-              
-              // CÁLCULO MEJORADO DE POSICIÓN
-              double currentProgress = 0.0;
-              if (_scrollController.hasClients) {
-                try {
-                  final scrollOffset = _scrollController.offset;
-                  final maxScroll = _scrollController.position.maxScrollExtent;
-                  final viewportHeight = _scrollController.position.viewportDimension;
-                  
-                  // Intentar obtener la posición del toque
-                  double touchYRelative = 0.5; // Default: centro del viewport
+        if (widget.readerMode != ReaderMode.reading) {
+          buttonItems.insert(
+            0,
+            ContextMenuButtonItem(
+              onPressed: () {
+                editableTextState.hideToolbar();
+                
+                // CÁLCULO MEJORADO DE POSICIÓN
+                double currentProgress = 0.0;
+                if (_scrollController.hasClients) {
                   try {
-                    final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
-                    touchYRelative = anchor.dy / viewportHeight; // Normalizado 0-1 dentro del viewport
+                    final scrollOffset = _scrollController.offset;
+                    final maxScroll = _scrollController.position.maxScrollExtent;
+                    final viewportHeight = _scrollController.position.viewportDimension;
+                    
+                    // Intentar obtener la posición del toque
+                    double touchYRelative = 0.5; // Default: centro del viewport
+                    try {
+                      final anchor = editableTextState.contextMenuAnchors.primaryAnchor;
+                      touchYRelative = anchor.dy / viewportHeight; // Normalizado 0-1 dentro del viewport
+                    } catch (e) {
+                      debugPrint("No se pudo obtener anchor, usando centro");
+                    }
+                    
+                    // CÁLCULO HÍBRIDO MEJORADO
+                    double scrollProgress = 0.0;
+                    double viewportSize = 0.0;
+                    double touchOffset = 0.0;
+                    
+                    if (maxScroll > 0) {
+                      // 1. Posición base del scroll
+                      scrollProgress = scrollOffset / maxScroll;
+                      
+                      // 2. Ajuste fino basado en la posición del toque dentro del viewport
+                      viewportSize = viewportHeight / (maxScroll + viewportHeight);
+                      touchOffset = touchYRelative * viewportSize;
+                      
+                      // 3. Combinar ambos
+                      currentProgress = scrollProgress + touchOffset;
+                    } else {
+                      // Documento corto que cabe en una pantalla
+                      currentProgress = touchYRelative;
+                    }
+                    
+                    currentProgress = currentProgress.clamp(0.0, 1.0);
+                    
                   } catch (e) {
-                    debugPrint("No se pudo obtener anchor, usando centro");
-                  }
-                  
-                  // CÁLCULO HÍBRIDO MEJORADO
-                  double scrollProgress = 0.0;
-                  double viewportSize = 0.0;
-                  double touchOffset = 0.0;
-                  
-                  if (maxScroll > 0) {
-                    // 1. Posición base del scroll
-                    scrollProgress = scrollOffset / maxScroll;
-                    
-                    // 2. Ajuste fino basado en la posición del toque dentro del viewport
-                    viewportSize = viewportHeight / (maxScroll + viewportHeight);
-                    touchOffset = touchYRelative * viewportSize;
-                    
-                    // 3. Combinar ambos
-                    currentProgress = scrollProgress + touchOffset;
-                  } else {
-                    // Documento corto que cabe en una pantalla
-                    currentProgress = touchYRelative;
-                  }
-                  
-                  currentProgress = currentProgress.clamp(0.0, 1.0);
-                  
-                } catch (e) {
-                  debugPrint("Error calculando posición: $e");
-                  // Fallback: usar scroll básico
-                  if (_scrollController.position.maxScrollExtent > 0) {
-                    currentProgress = _scrollController.offset / 
-                                    _scrollController.position.maxScrollExtent;
+                    debugPrint("Error calculando posición: $e");
+                    // Fallback: usar scroll básico
+                    if (_scrollController.position.maxScrollExtent > 0) {
+                      currentProgress = _scrollController.offset / 
+                                      _scrollController.position.maxScrollExtent;
+                    }
                   }
                 }
-              }
 
-              widget.onSaveToStudy(currentProgress);
+                widget.onSaveToStudy(currentProgress);
 
-            },
-            label: _getLabelForMode(widget.readerMode, l10n),
-          ),
-        );
+              },
+              label: _getLabelForMode(widget.readerMode, l10n),
+            ),
+          );
+        }
 
         return AdaptiveTextSelectionToolbar.buttonItems(
           anchors: editableTextState.contextMenuAnchors,
