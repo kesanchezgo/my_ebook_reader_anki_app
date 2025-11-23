@@ -71,6 +71,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   final DictionaryService _dictionaryService = DictionaryService();
   
   ReaderMode _readerMode = ReaderMode.reading;
+  bool _isAnalyzing = false;
   bool _isToolsMenuOpen = false;
   
   // FAB Opacity
@@ -506,7 +507,9 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     setState(() {
       _readerMode = mode;
       _isToolsMenuOpen = false;
-      _showControls = false;
+      if (mode != ReaderMode.reading) {
+        _showControls = false;
+      }
     });
     
     String message = '';
@@ -639,10 +642,15 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         }
 
                         if (_readerMode == ReaderMode.analyzing) {
-                           PremiumToast.show(context, l10n.analyzingContext);
+                           setState(() => _isAnalyzing = true);
                            final result = await _dictionaryService.explainContext(_currentSelection);
+                           if (mounted) setState(() => _isAnalyzing = false);
+                           
+                           // Reset mode to clear banner
+                           _setReaderMode(ReaderMode.reading);
+
                            if (result != null && mounted) {
-                             showModalBottomSheet(
+                             await showModalBottomSheet(
                                context: context,
                                isScrollControlled: true,
                                backgroundColor: Colors.transparent,
@@ -650,20 +658,28 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                  type: AiResultType.analysis,
                                  data: result,
                                  source: result['source'] ?? 'IA',
+                                 originalText: _currentSelection,
                                ),
                              );
+                             if (mounted) setState(() => _showControls = true);
                            } else if (mounted) {
                              PremiumToast.show(context, l10n.explanationError, isError: true);
+                             if (mounted) setState(() => _showControls = true);
                            }
-                           _setReaderMode(ReaderMode.reading);
                            return;
                         }
                         
                         if (_readerMode == ReaderMode.findingSynonyms) {
-                           PremiumToast.show(context, l10n.analyzingContext);
+                           setState(() => _isAnalyzing = true);
                            final result = await _dictionaryService.getSynonyms(_currentSelection);
+                           if (mounted) setState(() => _isAnalyzing = false);
+                           
+
+                           // Reset mode to clear banner
+                           _setReaderMode(ReaderMode.reading);
+
                            if (result != null && mounted) {
-                             showModalBottomSheet(
+                             await showModalBottomSheet(
                                context: context,
                                isScrollControlled: true,
                                backgroundColor: Colors.transparent,
@@ -671,12 +687,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                  type: AiResultType.synonyms,
                                  data: result,
                                  source: result['source'] ?? 'IA',
+                                 originalText: _currentSelection,
                                ),
                              );
+                             if (mounted) setState(() => _showControls = true);
                            } else if (mounted) {
                              PremiumToast.show(context, l10n.explanationError, isError: true);
+                             if (mounted) setState(() => _showControls = true);
                            }
-                           _setReaderMode(ReaderMode.reading);
                            return;
                         }
 
@@ -770,12 +788,13 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           ),
 
           // Banner de Instrucciones (Top)
-          if (_readerMode != ReaderMode.reading)
+          if (_readerMode != ReaderMode.reading || _isAnalyzing)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: Container(
+                width: double.infinity,
                 color: Theme.of(context).colorScheme.primaryContainer,
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 8,
@@ -785,22 +804,34 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    if (_isAnalyzing)
+                      SizedBox(
+                        width: 20, 
+                        height: 20, 
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2, 
+                          color: Theme.of(context).colorScheme.onPrimaryContainer
+                        )
+                      )
+                    else
+                      Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onPrimaryContainer),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        _getInstructionText(l10n),
+                        _isAnalyzing ? _getAnalyzingMessage(l10n) : _getInstructionText(l10n),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.bold,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => _setReaderMode(ReaderMode.reading),
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+                    if (!_isAnalyzing)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => _setReaderMode(ReaderMode.reading),
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                   ],
                 ),
               ),
@@ -852,7 +883,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             ),
           ),
           
-          // Speed Dial Menu
+          // Speed Dial Menu (Moderno)
           if (_isToolsMenuOpen)
             Positioned(
               bottom: 100,
@@ -860,22 +891,34 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _buildSpeedDialButton(
+                  _buildModernSpeedDialItem(
                     icon: Icons.compare_arrows,
                     label: l10n.readerToolSynonyms,
-                    onTap: () => _setReaderMode(ReaderMode.findingSynonyms),
+                    onTap: () {
+                      _toggleToolsMenu();
+                      _setReaderMode(ReaderMode.findingSynonyms);
+                    },
+                    delay: 0,
                   ),
                   const SizedBox(height: 16),
-                  _buildSpeedDialButton(
+                  _buildModernSpeedDialItem(
                     icon: Icons.analytics,
                     label: l10n.readerToolAnalyze,
-                    onTap: () => _setReaderMode(ReaderMode.analyzing),
+                    onTap: () {
+                      _toggleToolsMenu();
+                      _setReaderMode(ReaderMode.analyzing);
+                    },
+                    delay: 1,
                   ),
                   const SizedBox(height: 16),
-                  _buildSpeedDialButton(
+                  _buildModernSpeedDialItem(
                     icon: Icons.text_fields,
                     label: l10n.readerToolCapture,
-                    onTap: () => _setReaderMode(ReaderMode.capturingWord),
+                    onTap: () {
+                      _toggleToolsMenu();
+                      _setReaderMode(ReaderMode.capturingWord);
+                    },
+                    delay: 2,
                   ),
                 ],
               ),
@@ -888,10 +931,14 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             child: AnimatedOpacity(
               opacity: _fabOpacity,
               duration: const Duration(milliseconds: 300),
-              child: FloatingActionButton.small(
+              child: FloatingActionButton(
                 onPressed: _toggleToolsMenu,
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Icon(_isToolsMenuOpen ? Icons.close : Icons.auto_fix_high),
+                child: AnimatedRotation(
+                  turns: _isToolsMenuOpen ? 0.125 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
+                ),
               ),
             ),
           ),
@@ -899,6 +946,15 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       ),
       ),
     );
+  }
+
+  String _getAnalyzingMessage(AppLocalizations l10n) {
+    if (_readerMode == ReaderMode.findingSynonyms) {
+      return "Buscando sinónimos con IA...";
+    } else if (_readerMode == ReaderMode.analyzing) {
+      return "Analizando texto con IA...";
+    }
+    return l10n.analyzingContext;
   }
 
   String _getInstructionText(AppLocalizations l10n) {
@@ -916,43 +972,59 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     }
   }
 
-  Widget _buildSpeedDialButton({
+  Widget _buildModernSpeedDialItem({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required int delay,
   }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-              ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 200 + (delay * 50)),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                FloatingActionButton.small(
+                  heroTag: null,
+                  onPressed: onTap,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  elevation: 4,
+                  child: Icon(icon),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        FloatingActionButton.small(
-          heroTag: null,
-          onPressed: onTap,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          foregroundColor: Theme.of(context).colorScheme.primary,
-          child: Icon(icon),
-        ),
-      ],
+        );
+      },
     );
   }
 }

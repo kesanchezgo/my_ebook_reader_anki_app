@@ -10,12 +10,14 @@ class AiResultModal extends StatelessWidget {
   final AiResultType type;
   final Map<String, dynamic> data;
   final String source;
+  final String? originalText;
 
   const AiResultModal({
     super.key,
     required this.type,
     required this.data,
     required this.source,
+    this.originalText,
   });
 
   @override
@@ -112,6 +114,26 @@ class AiResultModal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (originalText != null) ...[
+          _buildSectionTitle(context, l10n.originalContext, Icons.format_quote),
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Text(
+              originalText!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+
         _buildSectionTitle(context, l10n.mainIdea, Icons.lightbulb_outline),
         Text(
           data['main_idea'] ?? '',
