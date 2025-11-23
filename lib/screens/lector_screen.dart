@@ -12,10 +12,12 @@ import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/settings_service.dart';
 import '../services/context_service.dart';
+import '../services/dictionary_service.dart';
 import '../bloc/biblioteca_bloc.dart';
 import '../bloc/biblioteca_event.dart';
 import '../widgets/study_edit_modal.dart';
 import '../widgets/premium_toast.dart';
+import '../widgets/ai_result_modal.dart';
 
 enum ReaderMode {
   reading,
@@ -66,9 +68,26 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   Map<String, dynamic>? _pendingStudyData;
   
   final ContextService _contextService = ContextService();
+  final DictionaryService _dictionaryService = DictionaryService();
   
   ReaderMode _readerMode = ReaderMode.reading;
   bool _isToolsMenuOpen = false;
+  
+  // FAB Opacity
+  double _fabOpacity = 1.0;
+  Timer? _fabOpacityTimer;
+
+  void _onUserInteraction() {
+    if (_fabOpacity != 1.0) {
+      setState(() => _fabOpacity = 1.0);
+    }
+    _fabOpacityTimer?.cancel();
+    _fabOpacityTimer = Timer(const Duration(seconds: 1), () {
+      if (mounted && !_isToolsMenuOpen) {
+        setState(() => _fabOpacity = 0.3);
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -513,44 +532,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     }
   }
 
-  Widget _buildToolButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   @override
   void dispose() {
@@ -618,6 +600,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       textColor: _textColor,
                       textAlign: _textAlign,
                       readerMode: _readerMode,
+                      onUserInteraction: _onUserInteraction,
                       onSelectionChanged: (selection) {
                         setState(() => _currentSelection = selection);
                       },
@@ -656,13 +639,43 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         }
 
                         if (_readerMode == ReaderMode.analyzing) {
-                           PremiumToast.show(context, "Analyzing: $_currentSelection");
+                           PremiumToast.show(context, l10n.analyzingContext);
+                           final result = await _dictionaryService.explainContext(_currentSelection);
+                           if (result != null && mounted) {
+                             showModalBottomSheet(
+                               context: context,
+                               isScrollControlled: true,
+                               backgroundColor: Colors.transparent,
+                               builder: (context) => AiResultModal(
+                                 type: AiResultType.analysis,
+                                 data: result,
+                                 source: result['source'] ?? 'IA',
+                               ),
+                             );
+                           } else if (mounted) {
+                             PremiumToast.show(context, l10n.explanationError, isError: true);
+                           }
                            _setReaderMode(ReaderMode.reading);
                            return;
                         }
                         
                         if (_readerMode == ReaderMode.findingSynonyms) {
-                           PremiumToast.show(context, "Synonyms for: $_currentSelection");
+                           PremiumToast.show(context, l10n.analyzingContext);
+                           final result = await _dictionaryService.getSynonyms(_currentSelection);
+                           if (result != null && mounted) {
+                             showModalBottomSheet(
+                               context: context,
+                               isScrollControlled: true,
+                               backgroundColor: Colors.transparent,
+                               builder: (context) => AiResultModal(
+                                 type: AiResultType.synonyms,
+                                 data: result,
+                                 source: result['source'] ?? 'IA',
+                               ),
+                             );
+                           } else if (mounted) {
+                             PremiumToast.show(context, l10n.explanationError, isError: true);
+                           }
                            _setReaderMode(ReaderMode.reading);
                            return;
                         }
@@ -756,6 +769,43 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
             ),
           ),
 
+          // Banner de Instrucciones (Top)
+          if (_readerMode != ReaderMode.reading)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  bottom: 12,
+                  left: 16,
+                  right: 8
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _getInstructionText(l10n),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => _setReaderMode(ReaderMode.reading),
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // Barra Inferior (Progreso)
           AnimatedPositioned(
             duration: const Duration(milliseconds: 200),
@@ -797,121 +847,37 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // Botón flotante de acción rápida para guardar si hay selección
-                  if (_currentSelection.isNotEmpty)
-                    IconButton(
-                      icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
-                      onPressed: () {
-                         // Trigger save logic via callback or direct call if possible
-                         // Since logic is in PageView builder, we might need a global key or similar
-                         // For simplicity, we rely on the context menu, but this is a nice visual cue
-                      },
-                    ),
                 ],
               ),
             ),
           ),
           
-          // Panel de Selección de Contexto Manual
-          if (_pendingStudyData != null)
-            Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: Card(
-                elevation: 8,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.format_quote_rounded, 
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              l10n.selectingContext,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              l10n.selectContextInstruction,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () {
-                          setState(() => _pendingStudyData = null);
-                        },
-                        tooltip: l10n.cancel,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // Tools Menu Overlay
+          // Speed Dial Menu
           if (_isToolsMenuOpen)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _toggleToolsMenu,
-                child: Container(
-                  color: Colors.black54,
-                  alignment: Alignment.bottomRight,
-                  padding: const EdgeInsets.only(bottom: 100, right: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildToolButton(
-                        icon: Icons.text_fields,
-                        label: l10n.readerToolCapture,
-                        onTap: () => _setReaderMode(ReaderMode.capturingWord),
-                      ),
-                      _buildToolButton(
-                        icon: Icons.format_quote,
-                        label: l10n.context,
-                        onTap: () => _setReaderMode(ReaderMode.capturingContext),
-                      ),
-                      _buildToolButton(
-                        icon: Icons.analytics,
-                        label: l10n.readerToolAnalyze,
-                        onTap: () => _setReaderMode(ReaderMode.analyzing),
-                      ),
-                      _buildToolButton(
-                        icon: Icons.compare_arrows,
-                        label: l10n.readerToolSynonyms,
-                        onTap: () => _setReaderMode(ReaderMode.findingSynonyms),
-                      ),
-                    ],
+            Positioned(
+              bottom: 100,
+              right: 24,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _buildSpeedDialButton(
+                    icon: Icons.compare_arrows,
+                    label: l10n.readerToolSynonyms,
+                    onTap: () => _setReaderMode(ReaderMode.findingSynonyms),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  _buildSpeedDialButton(
+                    icon: Icons.analytics,
+                    label: l10n.readerToolAnalyze,
+                    onTap: () => _setReaderMode(ReaderMode.analyzing),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSpeedDialButton(
+                    icon: Icons.text_fields,
+                    label: l10n.readerToolCapture,
+                    onTap: () => _setReaderMode(ReaderMode.capturingWord),
+                  ),
+                ],
               ),
             ),
 
@@ -919,15 +885,74 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           Positioned(
             bottom: 32,
             right: 24,
-            child: FloatingActionButton(
-              onPressed: _toggleToolsMenu,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Icon(_isToolsMenuOpen ? Icons.close : Icons.build),
+            child: AnimatedOpacity(
+              opacity: _fabOpacity,
+              duration: const Duration(milliseconds: 300),
+              child: FloatingActionButton.small(
+                onPressed: _toggleToolsMenu,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: Icon(_isToolsMenuOpen ? Icons.close : Icons.auto_fix_high),
+              ),
             ),
           ),
         ],
       ),
       ),
+    );
+  }
+
+  String _getInstructionText(AppLocalizations l10n) {
+    switch (_readerMode) {
+      case ReaderMode.capturingWord:
+        return l10n.promptSelectWord;
+      case ReaderMode.capturingContext:
+        return l10n.promptSelectContext;
+      case ReaderMode.analyzing:
+        return l10n.promptSelectText;
+      case ReaderMode.findingSynonyms:
+        return l10n.promptSelectWord;
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildSpeedDialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: null,
+          onPressed: onTap,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          foregroundColor: Theme.of(context).colorScheme.primary,
+          child: Icon(icon),
+        ),
+      ],
     );
   }
 }
@@ -944,6 +969,7 @@ class _ChapterView extends StatefulWidget {
   final Function(String) onSelectionChanged;
   final Function(double) onProgressChanged;
   final Function(double) onSaveToStudy;
+  final VoidCallback onUserInteraction;
   final bool isSelectingContext;
 
   const _ChapterView({
@@ -958,6 +984,7 @@ class _ChapterView extends StatefulWidget {
     required this.onSelectionChanged,
     required this.onProgressChanged,
     required this.onSaveToStudy,
+    required this.onUserInteraction,
     this.isSelectingContext = false,
   });
 
@@ -1030,6 +1057,7 @@ class _ChapterViewState extends State<_ChapterView> {
   }
 
   void _onScroll() {
+    widget.onUserInteraction();
     if (_isLoading) {
       _checkScrollRestoration();
     } else {
@@ -1140,8 +1168,6 @@ class _ChapterViewState extends State<_ChapterView> {
                   
                   currentProgress = currentProgress.clamp(0.0, 1.0);
                   
-
-                  
                 } catch (e) {
                   debugPrint("Error calculando posición: $e");
                   // Fallback: usar scroll básico
@@ -1173,6 +1199,7 @@ class _ChapterViewState extends State<_ChapterView> {
             curve: Curves.easeOut,
             child: NotificationListener<ScrollMetricsNotification>(
               onNotification: (metrics) {
+                widget.onUserInteraction();
                 if (_isLoading) {
                    _checkScrollRestoration();
                 }
