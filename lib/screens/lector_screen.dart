@@ -886,8 +886,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
           // Speed Dial Menu (Moderno)
           if (_isToolsMenuOpen)
             Positioned(
-              bottom: 100,
-              right: 24,
+              bottom: 80,
+              right: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -923,29 +923,23 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 ],
               ),
             ),
-
-          // FAB
-          Positioned(
-            bottom: 32,
-            right: 24,
-            child: AnimatedOpacity(
-              opacity: _fabOpacity,
-              duration: const Duration(milliseconds: 300),
-              child: FloatingActionButton(
-                onPressed: _toggleToolsMenu,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: AnimatedRotation(
-                  turns: _isToolsMenuOpen ? 0.125 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
+      floatingActionButton: AnimatedOpacity(
+        opacity: _fabOpacity,
+        duration: const Duration(milliseconds: 300),
+        child: FloatingActionButton(
+          onPressed: _toggleToolsMenu,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: AnimatedRotation(
+            turns: _isToolsMenuOpen ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: Icon(_isToolsMenuOpen ? Icons.add : Icons.auto_fix_high),
+          ),
+        ),
       ),
-    );
+    ),
+  );
   }
 
   String _getAnalyzingMessage(AppLocalizations l10n) {
@@ -986,7 +980,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         return Transform.translate(
           offset: Offset(0, 20 * (1 - value)),
           child: Opacity(
-            opacity: value,
+            opacity: value.clamp(0.0, 1.0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
