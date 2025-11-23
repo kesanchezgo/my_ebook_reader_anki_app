@@ -896,58 +896,60 @@ class _CardTile extends StatelessWidget {
                   ),
                 ],
                 
-                const SizedBox(height: 20),
-                
-                // Contexto/Oración
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        _buildSectionTitle(context, l10n.context),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: onExplainContext,
-                          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                          tooltip: l10n.explainWithAI,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          style: IconButton.styleFrom(
-                            foregroundColor: colorScheme.primary,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                if (card.context.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  
+                  // Contexto/Oración
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          _buildSectionTitle(context, l10n.context),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: onExplainContext,
+                            icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                            tooltip: l10n.explainWithAI,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            style: IconButton.styleFrom(
+                              foregroundColor: colorScheme.primary,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                           ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: onPlaySentence,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                        tooltip: l10n.listenContext,
+                        style: IconButton.styleFrom(
+                          backgroundColor: colorScheme.secondaryContainer.withOpacity(0.3),
+                          foregroundColor: colorScheme.secondary,
+                          padding: const EdgeInsets.all(8),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
                     ),
-                    IconButton(
-                      onPressed: onPlaySentence,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                      tooltip: l10n.listenContext,
-                      style: IconButton.styleFrom(
-                        backgroundColor: colorScheme.secondaryContainer.withOpacity(0.3),
-                        foregroundColor: colorScheme.secondary,
-                        padding: const EdgeInsets.all(8),
+                    child: Text(
+                      card.context,
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
                   ),
-                  child: Text(
-                    card.context,
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
+                ],
                 
                 const SizedBox(height: 20),
                 
