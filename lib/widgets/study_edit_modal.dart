@@ -51,8 +51,11 @@ class _StudyEditModalState extends State<StudyEditModal> {
   bool _isSearching = false;
   bool _cardExists = false;
   bool _isFormValid = false;
+  bool _isRegeneratingDefinitions = false;
   String? _definitionSource;
   List<String> _wordDefinitions = [];
+  List<List<String>> _definitionsHistory = [];
+  int _currentDefinitionIndex = 0;
   List<String> _irregularForms = [];
 
   @override
@@ -71,6 +74,8 @@ class _StudyEditModalState extends State<StudyEditModal> {
       // Cargar definiciones
       if (data['word_definitions'] != null) {
         _wordDefinitions = List<String>.from(data['word_definitions']);
+        _definitionsHistory = [_wordDefinitions];
+        _currentDefinitionIndex = 0;
       }
       
       // Cargar formas irregulares
@@ -178,6 +183,63 @@ class _StudyEditModalState extends State<StudyEditModal> {
         setState(() => _isSearching = false);
         PremiumToast.show(context, l10n.searchError, isError: true);
       }
+    }
+  }
+
+  Future<void> _regenerateDefinitions() async {
+    setState(() => _isRegeneratingDefinitions = true);
+    
+    try {
+      // Guardar el estado actual en el historial antes de regenerar
+      // (Aunque ya debería estar sincronizado, aseguramos)
+      if (_definitionsHistory.isNotEmpty) {
+        _definitionsHistory[_currentDefinitionIndex] = List.from(_wordDefinitions);
+      }
+
+      final result = await _dictionaryService.analyzeWordForLearning(
+        word: _wordController.text,
+        contextSentence: _contextController.text,
+        sourceLang: 'Inglés', // TODO: Obtener del libro
+        targetLang: 'Español',
+        bookInfo: widget.bookTitle,
+      );
+
+      if (mounted && result != null && result['word_definitions'] != null) {
+        final newDefinitions = List<String>.from(result['word_definitions']);
+        
+        setState(() {
+          _definitionsHistory.add(newDefinitions);
+          _currentDefinitionIndex = _definitionsHistory.length - 1;
+          _wordDefinitions = List.from(newDefinitions);
+          _isRegeneratingDefinitions = false;
+        });
+        
+        _validateForm();
+      } else {
+        if (mounted) {
+          setState(() => _isRegeneratingDefinitions = false);
+          PremiumToast.show(context, "No se pudieron generar nuevas definiciones.", isError: true);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error regenerating definitions: $e');
+      if (mounted) {
+        setState(() => _isRegeneratingDefinitions = false);
+        PremiumToast.show(context, "Error al regenerar definiciones.", isError: true);
+      }
+    }
+  }
+
+  void _navigateDefinitionsHistory(int direction) {
+    final newIndex = _currentDefinitionIndex + direction;
+    if (newIndex >= 0 && newIndex < _definitionsHistory.length) {
+      // Guardar cambios actuales antes de cambiar
+      _definitionsHistory[_currentDefinitionIndex] = List.from(_wordDefinitions);
+      
+      setState(() {
+        _currentDefinitionIndex = newIndex;
+        _wordDefinitions = List.from(_definitionsHistory[newIndex]);
+      });
     }
   }
 
@@ -383,6 +445,11 @@ class _StudyEditModalState extends State<StudyEditModal> {
                         icon: Icons.menu_book_rounded,
                         theme: theme,
                         addItemLabel: 'Agregar definición',
+                        onRegenerate: _regenerateDefinitions,
+                        isRegenerating: _isRegeneratingDefinitions,
+                        historyIndex: _currentDefinitionIndex,
+                        historyTotal: _definitionsHistory.length,
+                        onNavigateHistory: _navigateDefinitionsHistory,
                       ),
                       
                       _buildDynamicList(
@@ -621,6 +688,11 @@ class _StudyEditModalState extends State<StudyEditModal> {
     required IconData icon,
     required ThemeData theme,
     required String addItemLabel,
+    VoidCallback? onRegenerate,
+    bool isRegenerating = false,
+    int? historyIndex,
+    int? historyTotal,
+    Function(int)? onNavigateHistory,
   }) {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -637,16 +709,77 @@ class _StudyEditModalState extends State<StudyEditModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: textTheme.labelLarge?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  Icon(icon, size: 16, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
+              if (onRegenerate != null)
+                Row(
+                  children: [
+                    if (historyTotal != null && historyTotal > 1) ...[
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded),
+                        onPressed: historyIndex! > 0 
+                            ? () => onNavigateHistory?.call(-1) 
+                            : null,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        iconSize: 20,
+                        color: colorScheme.primary,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '${historyIndex + 1}/$historyTotal',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right_rounded),
+                        onPressed: historyIndex < historyTotal - 1 
+                            ? () => onNavigateHistory?.call(1) 
+                            : null,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        iconSize: 20,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (isRegenerating)
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.primary,
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: onRegenerate,
+                        tooltip: 'Regenerar con IA',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        iconSize: 18,
+                        color: colorScheme.primary,
+                      ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 12),
