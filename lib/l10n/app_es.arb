@@ -139,7 +139,6 @@
     }
   },
   "cardDeleted": "Tarjeta eliminada",
-  "analyzingContext": "Analizando contexto con IA...",
   "explanationError": "No se pudo obtener la explicación. Verifica tu conexión.",
   "connectionError": "Error de conexión",
   "contextAnalysis": "Análisis de Contexto",
@@ -242,14 +241,30 @@
   "langGerman": "🇩🇪 Alemán",
   "langItalian": "🇮🇹 Italiano",
   "langPortuguese": "🇧🇷 Portugués",
-  "readerToolCapture": "Capturar Ficha",
+  "readerToolCapture": "Crear Tarjeta",
   "readerToolAnalyze": "Analizar Texto",
   "readerToolSynonyms": "Ver Sinónimos",
   "promptSelectWord": "Selecciona la palabra a aprender",
-  "promptSelectContext": "Ahora selecciona el contexto",
+  "promptSelectContext": "Selecciona la oración para: {word}",
+  "@promptSelectContext": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "promptSelectText": "Selecciona el texto a analizar",
   "actionConfirmWord": "Confirmar Palabra",
   "actionConfirmContext": "Confirmar Contexto",
   "actionAnalyze": "Analizar",
-  "actionSynonyms": "Buscar Sinónimos"
+  "actionSynonyms": "Buscar Sinónimos",
+  "analyzingContext": "Analizando contexto con IA...",
+  "creatingCardFor": "Creando tarjeta para: {word}",
+  "@creatingCardFor": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -258,9 +258,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get cardDeleted => 'Cartão excluído';
 
   @override
-  String get analyzingContext => 'Analisando contexto com IA...';
-
-  @override
   String get explanationError =>
       'Não foi possível obter a explicação. Verifique sua conexão.';
 
@@ -485,7 +482,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get langPortuguese => '🇧🇷 Português';
 
   @override
-  String get readerToolCapture => 'Capturar Cartão';
+  String get readerToolCapture => 'Criar Cartão';
 
   @override
   String get readerToolAnalyze => 'Analisar Texto';
@@ -497,7 +494,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get promptSelectWord => 'Selecione a palavra para aprender';
 
   @override
-  String get promptSelectContext => 'Agora selecione o contexto';
+  String promptSelectContext(String word) {
+    return 'Selecione a frase para: $word';
+  }
 
   @override
   String get promptSelectText => 'Selecione o texto para analisar';
@@ -513,4 +512,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get actionSynonyms => 'Buscar Sinônimos';
+
+  @override
+  String get analyzingContext => 'Analisando contexto com IA...';
+
+  @override
+  String creatingCardFor(String word) {
+    return 'Criando cartão para: $word';
+  }
 }

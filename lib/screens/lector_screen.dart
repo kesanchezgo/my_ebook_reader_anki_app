@@ -686,7 +686,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         message = l10n.promptSelectWord;
         break;
       case ReaderMode.capturingContext:
-        message = l10n.promptSelectContext;
+        final word = _capturedWordForAI ?? _pendingStudyData?['word'] ?? '...';
+        message = l10n.promptSelectContext(word);
         break;
       case ReaderMode.analyzing:
         message = l10n.promptSelectText;
@@ -1253,7 +1254,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
     } else if (_readerMode == ReaderMode.analyzing) {
       return "Analizando texto con IA...";
     }
-    return l10n.analyzingContext;
+    return l10n.creatingCardFor(_capturedWordForAI ?? '...');
   }
 
   String _getInstructionText(AppLocalizations l10n) {
@@ -1261,7 +1262,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       case ReaderMode.capturingWord:
         return l10n.promptSelectWord;
       case ReaderMode.capturingContext:
-        return l10n.promptSelectContext;
+        final word = _capturedWordForAI ?? _pendingStudyData?['word'] ?? '...';
+        return l10n.promptSelectContext(word);
       case ReaderMode.analyzing:
         return l10n.promptSelectText;
       case ReaderMode.findingSynonyms:

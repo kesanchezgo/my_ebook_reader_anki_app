@@ -139,7 +139,6 @@
     }
   },
   "cardDeleted": "Card deleted",
-  "analyzingContext": "Analyzing context with AI...",
   "explanationError": "Could not get explanation. Check your connection.",
   "connectionError": "Connection error",
   "contextAnalysis": "Context Analysis",
@@ -242,14 +241,30 @@
   "langGerman": "🇩🇪 German",
   "langItalian": "🇮🇹 Italian",
   "langPortuguese": "🇧🇷 Portuguese",
-  "readerToolCapture": "Capture Card",
+  "readerToolCapture": "Create Card",
   "readerToolAnalyze": "Analyze Text",
   "readerToolSynonyms": "See Synonyms",
   "promptSelectWord": "Select the word to learn",
-  "promptSelectContext": "Now select the context",
+  "promptSelectContext": "Select sentence for: {word}",
+  "@promptSelectContext": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "promptSelectText": "Select text to analyze",
   "actionConfirmWord": "Confirm Word",
   "actionConfirmContext": "Confirm Context",
   "actionAnalyze": "Analyze",
-  "actionSynonyms": "Find Synonyms"
+  "actionSynonyms": "Find Synonyms",
+  "analyzingContext": "Analyzing context with AI...",
+  "creatingCardFor": "Creating card for: {word}",
+  "@creatingCardFor": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -544,12 +544,6 @@ abstract class AppLocalizations {
   /// **'Tarjeta eliminada'**
   String get cardDeleted;
 
-  /// No description provided for @analyzingContext.
-  ///
-  /// In es, this message translates to:
-  /// **'Analizando contexto con IA...'**
-  String get analyzingContext;
-
   /// No description provided for @explanationError.
   ///
   /// In es, this message translates to:
@@ -973,7 +967,7 @@ abstract class AppLocalizations {
   /// No description provided for @readerToolCapture.
   ///
   /// In es, this message translates to:
-  /// **'Capturar Ficha'**
+  /// **'Crear Tarjeta'**
   String get readerToolCapture;
 
   /// No description provided for @readerToolAnalyze.
@@ -997,8 +991,8 @@ abstract class AppLocalizations {
   /// No description provided for @promptSelectContext.
   ///
   /// In es, this message translates to:
-  /// **'Ahora selecciona el contexto'**
-  String get promptSelectContext;
+  /// **'Selecciona la oración para: {word}'**
+  String promptSelectContext(String word);
 
   /// No description provided for @promptSelectText.
   ///
@@ -1029,6 +1023,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Buscar Sinónimos'**
   String get actionSynonyms;
+
+  /// No description provided for @analyzingContext.
+  ///
+  /// In es, this message translates to:
+  /// **'Analizando contexto con IA...'**
+  String get analyzingContext;
+
+  /// No description provided for @creatingCardFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Creando tarjeta para: {word}'**
+  String creatingCardFor(String word);
 }
 
 class _AppLocalizationsDelegate
