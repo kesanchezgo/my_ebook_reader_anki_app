@@ -69,6 +69,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   
   // Estado temporal para selección manual de contexto
   Map<String, dynamic>? _pendingStudyData;
+  String? _capturedWordForAI;
   
   // final ContextService _contextService = ContextService();
   final DictionaryService _dictionaryService = DictionaryService();
@@ -651,6 +652,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       setState(() {
         _selectionClearToken++;
         _pendingStudyData = null;
+        _capturedWordForAI = null;
       });
       return;
     }
@@ -922,23 +924,40 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         final globalMode = SettingsService.instance.studyMode;
                         final isLearningMode = bookMode == 'learn_language' || (bookMode == null && globalMode == 'learning');
                         
-                        if (isLearningMode && (_readerMode == ReaderMode.reading || _readerMode == ReaderMode.capturingWord) && _pendingStudyData == null) {
+                        if (isLearningMode && _pendingStudyData == null) {
+                           // Paso 1: Capturar Palabra
+                           if (_capturedWordForAI == null) {
+                               setState(() {
+                                 _capturedWordForAI = _currentSelection;
+                               });
+                               _setReaderMode(ReaderMode.capturingContext);
+                               PremiumToast.show(context, "Palabra capturada. Ahora selecciona la oración de contexto.");
+                               return;
+                           }
+                           
+                           // Paso 2: Capturar Contexto y Analizar
                            setState(() => _isAnalyzing = true);
                            
-
-                           // Usamos la selección como palabra y contexto por ahora
-                           // Idealmente, si pudiéramos obtener la frase completa sería mejor.
+                           final word = _capturedWordForAI!;
+                           final contextSentence = _currentSelection;
+                           
                            final result = await _dictionaryService.analyzeWordForLearning(
-                             word: _currentSelection,
-                             contextSentence: _currentSelection, 
+                             word: word,
+                             contextSentence: contextSentence, 
                              sourceLang: _book.language ?? 'Inglés', 
                              targetLang: _book.targetLanguage ?? 'Español'
                            );
 
                            if (!mounted) return;
-                           setState(() => _isAnalyzing = false);
+                           setState(() {
+                               _isAnalyzing = false;
+                               _capturedWordForAI = null;
+                           });
 
                            if (result != null) {
+                              // Resetear modo a lectura para limpiar banner
+                              _setReaderMode(ReaderMode.reading);
+                              
                               final modalResult = await showModalBottomSheet(
                                 context: context,
                                 isScrollControlled: true,
@@ -947,10 +966,10 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                                 ),
                                 builder: (context) => StudyEditModal(
-                                  word: _currentSelection,
+                                  word: word,
                                   bookId: widget.book.id,
                                   bookTitle: widget.book.title,
-                                  context: _currentSelection, // Contexto original
+                                  context: contextSentence, // Contexto seleccionado
                                   learningData: result, // Pasamos los datos de IA
                                   mode: StudyCardType.acquisition,
                                 ),
