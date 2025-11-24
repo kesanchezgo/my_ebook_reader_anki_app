@@ -886,6 +886,7 @@ class DictionaryService {
     required String contextSentence,
     String sourceLang = 'Inglés',
     String targetLang = 'Español',
+    String? bookInfo,
   }) async {
     final apiKey = SettingsService.instance.geminiApiKey;
     if (apiKey.isEmpty) return null;
@@ -895,23 +896,69 @@ class DictionaryService {
       final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
       
       final prompt = """
-Actúa como un profesor de idiomas experto.
+Actúa como un profesor de idiomas y traductor literario experto, bilingüe en $sourceLang y $targetLang.
+
 Analiza la palabra exacta '$word' que aparece en este contexto: '$contextSentence'.
-Idioma Origen: $sourceLang. Idioma Destino: $targetLang.
+${bookInfo != null && bookInfo.isNotEmpty ? 'Esta frase proviene de: $bookInfo.' : ''}
+
+CATEGORÍAS GRAMATICALES VÁLIDAS:
+- (n.) sustantivo
+- (pron.) pronombre  
+- (v.) verbo
+- (adj.) adjetivo
+- (adv.) adverbio
+- (prep.) preposición
+- (conj.) conjunción
+- (interj.) interjección
+- (art.) artículo
+- (det.) determinante
+
+REGLAS IMPORTANTES:
+
+1. TRADUCCIONES:
+   - Traduce respetando tiempos verbales, concordancia y significado correcto
+   - La traducción debe ser COMPRENSIBLE y GRAMATICALMENTE CORRECTA
+   - Respeta el tiempo verbal original (ej: 'became'=pasado → 'se convirtió', NO 'se vuelva')
+   - Prioriza CLARIDAD sobre literalidad extrema
+   ${bookInfo != null && bookInfo.isNotEmpty ? '- Respeta el estilo y registro literario del texto original' : ''}
+
+2. DEFINICIONES (word_definitions):
+   - Agrupa sinónimos separados por comas dentro de cada entrada
+   - Formato: "(categoría) sinónimo1, sinónimo2, sinónimo3"
+   - Ejemplo: "(v.) convertirse, volverse, transformarse", "(adj.) convertido, transformado"
+   - Incluye TODAS las categorías gramaticales aplicables a la palabra
+
+3. FORMAS IRREGULARES (irregular_forms):
+   - Para VERBOS irregulares: [infinitivo, pasado simple, participio pasado, gerundio]
+     Ejemplos: ["be", "was/were", "been", "being"], ["go", "went", "gone", "going"]
+   - Para SUSTANTIVOS con plural irregular: [singular, plural]
+     Ejemplos: ["child", "children"], ["foot", "feet"]
+   - Para ADJETIVOS con comparativos irregulares: [positivo, comparativo, superlativo]
+     Ejemplos: ["good", "better", "best"], ["bad", "worse", "worst"]
+   - Para PRONOMBRES con declinación: lista de formas
+     Ejemplos: ["I", "me", "my", "mine", "myself"]
+   - Si es REGULAR o no tiene formas irregulares: []
+
+4. EJEMPLO:
+   - Usa '$word' EXACTAMENTE como aparece (mismo tiempo, número, persona)
+   - NO uses la forma base si está conjugada/declinada
 
 Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
 {
-  "context_translation": "Traducción natural de la oración de contexto al $targetLang",
+  "context_translation": "Traducción clara y correcta al $targetLang",
   "word_definitions": [
-    "Lista de posibles traducciones de la palabra base al $targetLang.",
-    "Formato: '(tipo) significado'. Ej: '(v.) congelar', '(n.) helada'."
+    "(categoría) sinónimo1, sinónimo2",
+    "(categoría) significado"
   ],
-  "irregular_forms": ["forma1", "forma2"],
-  "example_original": "Una oración de ejemplo simple usando la palabra '$word' EXACTAMENTE como está escrita en la selección (mismo tiempo verbal, pluralidad o conjugación). NO uses la forma base (infinitivo) si la palabra seleccionada está conjugada.",
-  "example_translation": "Traducción de la oración de ejemplo al $targetLang"
+  "irregular_forms": ["forma1", "forma2", ...] o [],
+  "example_original": "Oración usando '$word' en la misma forma",
+  "example_translation": "Traducción clara del ejemplo"
 }
-Nota: Para "irregular_forms", si es regular, devuelve null o lista vacía. Ej: 'freeze | frozen'.
 """;
+
+      print('--- PROMPT ENVIADO A GEMINI ---');
+      print(prompt);
+      print('-------------------------------');
 
       final response = await http.post(
         url,
@@ -924,6 +971,11 @@ Nota: Para "irregular_forms", si es regular, devuelve null o lista vacía. Ej: '
           }]
         }),
       ).timeout(const Duration(seconds: 15));
+
+      print('--- RESPUESTA DE GEMINI ---');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('---------------------------');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

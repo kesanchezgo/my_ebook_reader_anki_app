@@ -945,7 +945,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                              word: word,
                              contextSentence: contextSentence, 
                              sourceLang: _book.language ?? 'Inglés', 
-                             targetLang: _book.targetLanguage ?? 'Español'
+                             targetLang: _book.targetLanguage ?? 'Español',
+                             bookInfo: widget.book.title,
                            );
 
                            if (!mounted) return;
