@@ -916,16 +916,23 @@ CATEGORÍAS GRAMATICALES VÁLIDAS:
 REGLAS IMPORTANTES:
 
 1. TRADUCCIONES:
-   - Traduce respetando tiempos verbales, concordancia y significado correcto
-   - La traducción debe ser COMPRENSIBLE y GRAMATICALMENTE CORRECTA
-   - Respeta el tiempo verbal original (ej: 'became'=pasado → 'se convirtió', NO 'se vuelva')
-   - Prioriza CLARIDAD sobre literalidad extrema
+   ⭐ CAMBIO AQUÍ ⭐
+   - Traduce de forma NATURAL y FLUIDA como hablaría un nativo
+   - Evita traducciones palabra-por-palabra o excesivamente literales
+   - Usa vocabulario común y expresiones naturales del $targetLang
+   - Respeta el tiempo verbal, concordancia y significado correcto
+   - Ejemplos de traducciones naturales:
+     * "Perhaps the thing became..." → "Quizás aquello se convirtió..." (NO "Quizás la cosa se convirtió...")
+     * "the thing" → "aquello, eso" (NO "la cosa")
+     * "It is important that..." → "Es importante que..." (NO mantener estructuras forzadas)
+   - Prioriza: NATURALIDAD > CLARIDAD > Literalidad
    ${bookInfo != null && bookInfo.isNotEmpty ? '- Respeta el estilo y registro literario del texto original' : ''}
 
 2. DEFINICIONES (word_definitions):
    - Agrupa sinónimos separados por comas dentro de cada entrada
    - Formato: "(categoría) sinónimo1, sinónimo2, sinónimo3"
-   - Ejemplo: "(v.) convertirse, volverse, transformarse", "(adj.) convertido, transformado"
+   - Usa traducciones comunes y naturales, no literales
+   - Ejemplo: "(n.) obsesión, fijación" NO "(n.) la obsesión, una obsesión"
    - Incluye TODAS las categorías gramaticales aplicables a la palabra
 
 3. FORMAS IRREGULARES (irregular_forms):
@@ -941,18 +948,19 @@ REGLAS IMPORTANTES:
 
 4. EJEMPLO:
    - Usa '$word' EXACTAMENTE como aparece (mismo tiempo, número, persona)
+   - La traducción del ejemplo debe sonar completamente natural
    - NO uses la forma base si está conjugada/declinada
 
 Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
 {
-  "context_translation": "Traducción clara y correcta al $targetLang",
+  "context_translation": "Traducción natural y fluida al $targetLang (como hablaría un nativo)",
   "word_definitions": [
     "(categoría) sinónimo1, sinónimo2",
     "(categoría) significado"
   ],
   "irregular_forms": ["forma1", "forma2", ...] o [],
   "example_original": "Oración usando '$word' en la misma forma",
-  "example_translation": "Traducción clara del ejemplo"
+  "example_translation": "Traducción natural del ejemplo (no literal)"
 }
 """;
 
@@ -985,11 +993,22 @@ Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
             final parts = content['parts'] as List;
             if (parts.isNotEmpty) {
               final text = parts[0]['text'] as String;
-              final cleanJson = text.replaceAll(RegExp(r'```json|```'), '').trim();
-              try {
-                return jsonDecode(cleanJson) as Map<String, dynamic>;
-              } catch (e) {
-                print('Error parsing JSON from Gemini Learning Analysis: $e');
+              
+              // Intentar extraer solo el bloque JSON
+              final startIndex = text.indexOf('{');
+              final endIndex = text.lastIndexOf('}');
+              
+              if (startIndex != -1 && endIndex != -1) {
+                final jsonString = text.substring(startIndex, endIndex + 1);
+                try {
+                  return jsonDecode(jsonString) as Map<String, dynamic>;
+                } catch (e) {
+                  print('Error parsing JSON from Gemini Learning Analysis: $e');
+                  print('JSON String attempted: $jsonString');
+                }
+              } else {
+                print('Error: No JSON found in Gemini response');
+                print('Full Text: $text');
               }
             }
           }
