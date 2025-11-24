@@ -68,80 +68,55 @@ lib/
 │       └── BibliotecaBookImported      # Libro importado
 │
 ├── models/                            # Modelos de datos
-│   └── book.dart
-│       ├── Propiedades del libro
-│       ├── toJson() / fromJson()       # Serialización
-│       ├── copyWith()                  # Inmutabilidad
-│       └── progress getter             # Cálculo de progreso
+│   ├── book.dart                      # Modelo de libro
+│   └── study_card.dart                # Modelo de tarjeta de estudio (Anki)
 │
 ├── screens/                           # Pantallas de la UI
-│   ├── biblioteca_screen.dart
-│   │   ├── BlocConsumer               # Escucha estados y eventos
-│   │   ├── _buildEmptyState()         # Vista sin libros
-│   │   ├── _buildBookGrid()           # Cuadrícula de libros
-│   │   ├── _openBook()                # Navegación al lector
-│   │   └── _deleteBook()              # Confirmación y eliminación
-│   │
-│   └── lector_screen.dart
-│       ├── State Management           # Estado local para páginas
-│       ├── _loadProgress()            # Cargar progreso guardado
-│       ├── _saveProgress()            # Guardar progreso
-│       ├── _buildReader()             # Factory del lector
-│       ├── _buildPdfReader()          # Lector PDF
-│       ├── _buildEpubReader()         # Lector EPUB
-│       └── _showAddToAnkiDialog()     # (Preparado para Fase 2)
+│   ├── biblioteca_screen.dart         # Grid de libros
+│   ├── lector_screen.dart             # Lector EPUB con herramientas de estudio
+│   ├── idiomas_screen.dart            # Gestión de vocabulario (Adquisición)
+│   ├── vocabulario_screen.dart        # Gestión de vocabulario (Enriquecimiento)
+│   └── settings_screen.dart           # Configuración (API Keys, Temas)
 │
 ├── services/                          # Servicios de negocio
-│   ├── local_storage_service.dart
-│   │   ├── SharedPreferences          # Almacenamiento clave-valor
-│   │   ├── getBooks()                 # Obtener libros
-│   │   ├── saveBooks()                # Guardar libros
-│   │   ├── addBook()                  # Añadir libro
-│   │   ├── updateBook()               # Actualizar libro
-│   │   ├── deleteBook()               # Eliminar libro
-│   │   ├── saveProgress()             # Guardar progreso
-│   │   └── getProgress()              # Obtener progreso
-│   │
-│   └── file_service.dart
-│       ├── pickBookFile()             # Selector de archivos
-│       ├── copyFileToAppDirectory()   # Copiar archivo
-│       ├── deleteFile()               # Eliminar archivo
-│       ├── getFileName()              # Obtener nombre
-│       ├── getFileExtension()         # Obtener extensión
-│       └── fileExists()               # Verificar existencia
+│   ├── local_storage_service.dart     # SharedPreferences (Configuración)
+│   ├── file_service.dart              # Gestión de archivos
+│   ├── dictionary_service.dart        # Lógica de IA (Gemini)
+│   ├── study_database_service.dart    # Base de datos SQLite (Tarjetas)
+│   ├── tts_service.dart               # Text-to-Speech
+│   └── export_service.dart            # Exportación a CSV
 │
 └── widgets/                           # Widgets reutilizables
-    └── book_card.dart
-        ├── Diseño de tarjeta
-        ├── Indicador de tipo (PDF/EPUB)
-        ├── Barra de progreso
-        ├── Botón de eliminar
-        └── Tap handler
+    ├── book_card.dart                 # Tarjeta de libro
+    ├── study_edit_modal.dart          # Modal de edición de tarjeta
+    └── ai_result_modal.dart           # Modal de resultados de IA
 ```
 
 ## 🔄 Ciclo de Vida de un Evento
 
-### Ejemplo: Importar un Libro
+### Ejemplo: Crear una Tarjeta de Estudio
 
 ```
-1. Usuario toca el botón "+"
+1. Usuario selecciona texto en LectorScreen
    ↓
-2. BibliotecaScreen dispara: ImportBook()
+2. Menú contextual: "Crear Tarjeta"
    ↓
-3. BibliotecaBloc._onImportBook()
-   ├── Emite: BibliotecaImporting
-   ├── Llama: FileService.pickBookFile()
-   ├── Llama: FileService.copyFileToAppDirectory()
-   ├── Crea: Book object con UUID
-   ├── Llama: LocalStorageService.addBook()
-   ├── Emite: BibliotecaBookImported(book)
-   └── Emite: BibliotecaLoaded(books)
+3. DictionaryService.analyzeWord()
+   ├── Llama API de Gemini
+   ├── Obtiene definición, traducción y ejemplos
+   └── Retorna datos estructurados
    ↓
-4. BibliotecaScreen.BlocConsumer
-   ├── Listener: Muestra SnackBar de éxito
-   └── Builder: Reconstruye la cuadrícula
+4. StudyEditModal (UI)
+   ├── Muestra datos pre-rellenados
+   ├── Permite edición manual
+   └── Usuario confirma "Guardar"
    ↓
-5. UI actualizada con el nuevo libro
+5. StudyDatabaseService.insertCard()
+   ├── Genera audio con TtsService
+   ├── Guarda en SQLite
+   └── Retorna éxito
+   ↓
+6. UI muestra confirmación (Toast)
 ```
 
 ## 🎨 Capas de la Arquitectura

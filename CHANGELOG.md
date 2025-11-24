@@ -1,6 +1,37 @@
-# 📝 Notas de Versión - Mi Lector Anki
+# 📝 Changelog
 
-## Version 1.0.0 - Fase 1 (Noviembre 2025)
+Todos los cambios notables en este proyecto serán documentados en este archivo.
+
+## [1.0.0+1] - Fase 2 (Actual)
+
+### ✨ Nuevas Características
+- **Integración IA (Gemini):**
+  - Análisis contextual de palabras y oraciones.
+  - Detección automática de lemas y formas irregulares.
+  - Generación de ejemplos de uso personalizados.
+- **Modos de Estudio:**
+  - Implementación de lógica para "Aprender Idioma" vs "Mejorar Vocabulario".
+  - Adaptación de prompts de IA según el modo activo.
+- **Base de Datos Local:**
+  - Migración a `sqflite` para almacenamiento robusto de tarjetas.
+  - CRUD completo para tarjetas de estudio.
+- **Interfaz de Usuario:**
+  - Nueva pantalla "Idiomas" con tarjetas expandibles.
+  - Botones de "Traducción" ocultables para reducir ruido visual.
+  - Modal de edición de tarjetas con validación y regeneración por IA.
+- **Audio (TTS):**
+  - Lectura en voz alta de palabras y oraciones en múltiples idiomas.
+- **Exportación:**
+  - Funcionalidad para exportar tarjetas a formato CSV.
+
+### 🐛 Correcciones
+- Solucionado timeout en llamadas a la API de Gemini (aumentado a 30s).
+- Corregido error de renderizado en EPUBs con estilos CSS complejos.
+- Mejorada la detección de selección de texto en Android.
+
+---
+
+## [1.0.0] - Fase 1 (MVP)
 
 ### 🎉 Lanzamiento Inicial - MVP Local
 
