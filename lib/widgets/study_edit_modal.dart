@@ -274,282 +274,294 @@ class _StudyEditModalState extends State<StudyEditModal> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final mediaQuery = MediaQuery.of(context);
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: mediaQuery.size.height * 0.85,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: mediaQuery.viewInsets.bottom + 24,
         left: 24,
         right: 24,
         top: 12,
       ),
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(height: 24),
-  
-              // Header
-              Row(
-                children: [
-                  Icon(
-                    widget.mode == StudyCardType.acquisition 
-                        ? Icons.language_rounded 
-                        : Icons.bookmark_add_rounded, 
-                    color: colorScheme.primary, 
-                    size: 28
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.mode == StudyCardType.acquisition 
-                        ? l10n.createStudyCard
-                        : l10n.createStudyCard,
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              
-              // Warning Card
-              if (_cardExists)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.errorContainer.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.error.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          l10n.wordAlreadyExists,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-  
-              // 1. Word Input
-              _buildModernTextField(
-                controller: _wordController,
-                label: l10n.word,
-                icon: Icons.translate_rounded,
-                theme: theme,
-              ),
-              
-              // 2 & 3. Definitions & Irregular Forms (Acquisition) OR Definition (Enrichment)
-              if (widget.mode == StudyCardType.acquisition) ...[
-                _buildDynamicList(
-                  title: 'Definiciones',
-                  items: _wordDefinitions,
-                  icon: Icons.menu_book_rounded,
-                  theme: theme,
-                  addItemLabel: 'Agregar definición',
-                ),
-                
-                _buildDynamicList(
-                  title: 'Formas Irregulares',
-                  items: _irregularForms,
-                  icon: Icons.change_circle_outlined,
-                  theme: theme,
-                  addItemLabel: 'Agregar forma irregular',
-                ),
-                const SizedBox(height: 16),
-              ] else ...[
-                const SizedBox(height: 16),
-                // Definition Source Chip
-                if (_definitionSource != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8, left: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.source(_definitionSource!),
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-    
-                _buildModernTextField(
-                  controller: _definitionController,
-                  label: l10n.definition,
-                  icon: Icons.menu_book_rounded,
-                  theme: theme,
-                  maxLines: 3,
-                  isLoading: _isSearching,
-                ),
-                const SizedBox(height: 16),
-              ],
+            ),
+          ),
+          const SizedBox(height: 24),
 
-              // 4. Example Input
-              _buildModernTextField(
-                controller: _exampleController,
-                label: l10n.exampleOptional,
-                icon: Icons.lightbulb_outline_rounded,
-                theme: theme,
-                maxLines: 2,
-                isRequired: false,
+          // Header
+          Row(
+            children: [
+              Icon(
+                widget.mode == StudyCardType.acquisition 
+                    ? Icons.language_rounded 
+                    : Icons.bookmark_add_rounded, 
+                color: colorScheme.primary, 
+                size: 28
               ),
-              
-              // 5. Example Translation (Acquisition only)
-              if (widget.mode == StudyCardType.acquisition) ...[
-                const SizedBox(height: 16),
-                _buildModernTextField(
-                  controller: _exampleTranslationController,
-                  label: 'Traducción del Ejemplo',
-                  icon: Icons.g_translate_rounded,
-                  theme: theme,
-                  maxLines: 2,
-                  isRequired: false,
-                ),
-              ],
-              
-              const SizedBox(height: 16),
-  
-              // 6. Context
-              if (widget.mode == StudyCardType.enrichment) ...[
-                _buildModernTextField(
-                  controller: _contextController,
-                  label: '${l10n.context} (Opcional)',
-                  icon: Icons.format_quote_rounded,
-                  theme: theme,
-                  maxLines: 2,
-                  isRequired: false,
-                ),
-                
-                // Manual Context Button
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: _requestManualContext,
-                    icon: const Icon(Icons.touch_app_rounded, size: 18),
-                    label: Text(l10n.selectFromBook),
-                    style: TextButton.styleFrom(
-                      foregroundColor: colorScheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                // Learning Mode: Read-only Context Display
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.text_snippet_rounded, size: 16, color: colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Contexto Original',
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _contextController.text,
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                _buildModernTextField(
-                  controller: _contextTranslationController,
-                  label: 'Traducción del Contexto',
-                  icon: Icons.g_translate_rounded,
-                  theme: theme,
-                  maxLines: 2,
-                  isRequired: false,
-                ),
-              ],
-              
-              const SizedBox(height: 24),
-              
-              // Action Button
-              SizedBox(
-                height: 56,
-                child: FilledButton(
-                  onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isLoading 
-                    ? SizedBox(
-                        height: 24, 
-                        width: 24, 
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5, 
-                          color: colorScheme.onPrimary
-                        )
-                      )
-                    : Text(
-                        l10n.saveCard, 
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                          color: colorScheme.onPrimary,
-                        ),
-                      ),
+              const SizedBox(width: 12),
+              Text(
+                widget.mode == StudyCardType.acquisition 
+                    ? l10n.createStudyCard
+                    : l10n.createStudyCard,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 24),
+
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Warning Card
+                    if (_cardExists)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colorScheme.error.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: colorScheme.error, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                l10n.wordAlreadyExists,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onErrorContainer,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+        
+                    // 1. Word Input
+                    _buildModernTextField(
+                      controller: _wordController,
+                      label: l10n.word,
+                      icon: Icons.translate_rounded,
+                      theme: theme,
+                    ),
+                    
+                    // 2 & 3. Definitions & Irregular Forms (Acquisition) OR Definition (Enrichment)
+                    if (widget.mode == StudyCardType.acquisition) ...[
+                      _buildDynamicList(
+                        title: 'Definiciones',
+                        items: _wordDefinitions,
+                        icon: Icons.menu_book_rounded,
+                        theme: theme,
+                        addItemLabel: 'Agregar definición',
+                      ),
+                      
+                      _buildDynamicList(
+                        title: 'Formas Irregulares',
+                        items: _irregularForms,
+                        icon: Icons.change_circle_outlined,
+                        theme: theme,
+                        addItemLabel: 'Agregar forma irregular',
+                      ),
+                      const SizedBox(height: 16),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      // Definition Source Chip
+                      if (_definitionSource != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8, left: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.source(_definitionSource!),
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+          
+                      _buildModernTextField(
+                        controller: _definitionController,
+                        label: l10n.definition,
+                        icon: Icons.menu_book_rounded,
+                        theme: theme,
+                        maxLines: 3,
+                        isLoading: _isSearching,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // 4. Example Input
+                    _buildModernTextField(
+                      controller: _exampleController,
+                      label: l10n.exampleOptional,
+                      icon: Icons.lightbulb_outline_rounded,
+                      theme: theme,
+                      maxLines: 2,
+                      isRequired: false,
+                    ),
+                    
+                    // 5. Example Translation (Acquisition only)
+                    if (widget.mode == StudyCardType.acquisition) ...[
+                      const SizedBox(height: 16),
+                      _buildModernTextField(
+                        controller: _exampleTranslationController,
+                        label: 'Traducción del Ejemplo',
+                        icon: Icons.g_translate_rounded,
+                        theme: theme,
+                        maxLines: 2,
+                        isRequired: false,
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 16),
+        
+                    // 6. Context
+                    if (widget.mode == StudyCardType.enrichment) ...[
+                      _buildModernTextField(
+                        controller: _contextController,
+                        label: '${l10n.context} (Opcional)',
+                        icon: Icons.format_quote_rounded,
+                        theme: theme,
+                        maxLines: 2,
+                        isRequired: false,
+                      ),
+                      
+                      // Manual Context Button
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _requestManualContext,
+                          icon: const Icon(Icons.touch_app_rounded, size: 18),
+                          label: Text(l10n.selectFromBook),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      // Learning Mode: Read-only Context Display
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.text_snippet_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Contexto Original',
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _contextController.text,
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      _buildModernTextField(
+                        controller: _contextTranslationController,
+                        label: 'Traducción del Contexto',
+                        icon: Icons.g_translate_rounded,
+                        theme: theme,
+                        maxLines: 2,
+                        isRequired: false,
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Action Button
+                    SizedBox(
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: (_isLoading || _cardExists || !_isFormValid) ? null : _saveCard,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading 
+                          ? SizedBox(
+                              height: 24, 
+                              width: 24, 
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5, 
+                                color: colorScheme.onPrimary
+                              )
+                            )
+                          : Text(
+                              l10n.saveCard, 
+                              style: textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
