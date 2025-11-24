@@ -53,6 +53,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
   bool _isFormValid = false;
   bool _isRegeneratingDefinitions = false;
   bool _isRegeneratingContextTranslation = false;
+  bool _isRegeneratingExample = false;
   String? _definitionSource;
   List<String> _wordDefinitions = [];
   List<List<String>> _definitionsHistory = [];
@@ -60,6 +61,8 @@ class _StudyEditModalState extends State<StudyEditModal> {
   List<String> _irregularForms = [];
   List<String> _contextTranslationHistory = [];
   int _currentContextTranslationIndex = 0;
+  List<Map<String, String>> _exampleHistory = [];
+  int _currentExampleIndex = 0;
 
   @override
   void initState() {
@@ -89,6 +92,15 @@ class _StudyEditModalState extends State<StudyEditModal> {
       // Cargar ejemplos
       _exampleController = TextEditingController(text: data['example_original'] ?? '');
       _exampleTranslationController.text = data['example_translation'] ?? '';
+      
+      if (_exampleController.text.isNotEmpty && _exampleTranslationController.text.isNotEmpty) {
+        _exampleHistory = [{
+          'original': _exampleController.text,
+          'translation': _exampleTranslationController.text,
+        }];
+        _currentExampleIndex = 0;
+      }
+
       _contextTranslationController.text = data['context_translation'] ?? '';
       
       if (_contextTranslationController.text.isNotEmpty) {
@@ -221,9 +233,11 @@ class _StudyEditModalState extends State<StudyEditModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al regenerar definiciones: $e')),
-        );
+        String message = e.toString();
+        if (message.contains("Exception: ")) {
+          message = message.replaceAll("Exception: ", "");
+        }
+        PremiumToast.show(context, message, isError: true);
       }
     } finally {
       if (mounted) {
@@ -261,14 +275,65 @@ class _StudyEditModalState extends State<StudyEditModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al regenerar traducción: $e')),
-        );
+        String message = e.toString();
+        if (message.contains("Exception: ")) {
+          message = message.replaceAll("Exception: ", "");
+        }
+        PremiumToast.show(context, message, isError: true);
       }
     } finally {
       if (mounted) {
         setState(() {
           _isRegeneratingContextTranslation = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _regenerateExample() async {
+    if (_wordController.text.isEmpty || _contextController.text.isEmpty) return;
+
+    setState(() {
+      _isRegeneratingExample = true;
+    });
+
+    try {
+      final result = await _dictionaryService.generateExampleWithTranslation(
+        word: _wordController.text,
+        contextSentence: _contextController.text,
+        bookInfo: widget.bookTitle,
+      );
+
+      if (mounted && result != null) {
+        final exampleOriginal = result['example_original'] as String?;
+        final exampleTranslation = result['example_translation'] as String?;
+
+        if (exampleOriginal != null && exampleTranslation != null) {
+          setState(() {
+            _exampleController.text = exampleOriginal;
+            _exampleTranslationController.text = exampleTranslation;
+            
+            // Añadir al historial
+            _exampleHistory.add({
+              'original': exampleOriginal,
+              'translation': exampleTranslation,
+            });
+            _currentExampleIndex = _exampleHistory.length - 1;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String message = e.toString();
+        if (message.contains("Exception: ")) {
+          message = message.replaceAll("Exception: ", "");
+        }
+        PremiumToast.show(context, message, isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRegeneratingExample = false;
         });
       }
     }
@@ -293,6 +358,17 @@ class _StudyEditModalState extends State<StudyEditModal> {
       setState(() {
         _currentDefinitionIndex = newIndex;
         _wordDefinitions = List.from(_definitionsHistory[newIndex]);
+      });
+    }
+  }
+
+  void _navigateExampleHistory(int direction) {
+    final newIndex = _currentExampleIndex + direction;
+    if (newIndex >= 0 && newIndex < _exampleHistory.length) {
+      setState(() {
+        _currentExampleIndex = newIndex;
+        _exampleController.text = _exampleHistory[newIndex]['original'] ?? '';
+        _exampleTranslationController.text = _exampleHistory[newIndex]['translation'] ?? '';
       });
     }
   }
@@ -546,23 +622,117 @@ class _StudyEditModalState extends State<StudyEditModal> {
                       const SizedBox(height: 16),
                     ],
 
-                    // 4. Example Input
-                    _buildModernTextField(
-                      controller: _exampleController,
-                      label: l10n.exampleOptional,
-                      icon: Icons.lightbulb_outline_rounded,
-                      theme: theme,
-                      maxLines: 2,
-                      isRequired: false,
-                    ),
-                    
-                    // 5. Example Translation (Acquisition only)
+                    // 4 & 5. Example & Translation
                     if (widget.mode == StudyCardType.acquisition) ...[
-                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.lightbulb_outline_rounded, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Ejemplo y Traducción',
+                                        style: textTheme.labelLarge?.copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_exampleHistory.length > 1) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_left_rounded),
+                                      onPressed: _currentExampleIndex > 0 
+                                          ? () => _navigateExampleHistory(-1) 
+                                          : null,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 20,
+                                      color: colorScheme.primary,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        '${_currentExampleIndex + 1}/${_exampleHistory.length}',
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_right_rounded),
+                                      onPressed: _currentExampleIndex < _exampleHistory.length - 1 
+                                          ? () => _navigateExampleHistory(1) 
+                                          : null,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 20,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  if (_isRegeneratingExample)
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colorScheme.primary,
+                                      ),
+                                    )
+                                  else
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh_rounded),
+                                      onPressed: _regenerateExample,
+                                      tooltip: 'Regenerar Ejemplo',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 18,
+                                      color: colorScheme.primary,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _buildModernTextField(
+                            controller: _exampleController,
+                            label: 'Ejemplo',
+                            icon: null,
+                            theme: theme,
+                            maxLines: 2,
+                            isRequired: false,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildModernTextField(
+                            controller: _exampleTranslationController,
+                            label: 'Traducción',
+                            icon: Icons.translate_rounded,
+                            theme: theme,
+                            maxLines: 2,
+                            isRequired: false,
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Enrichment Mode: Simple Example Field
                       _buildModernTextField(
-                        controller: _exampleTranslationController,
-                        label: 'Traducción del Ejemplo',
-                        icon: Icons.g_translate_rounded,
+                        controller: _exampleController,
+                        label: l10n.exampleOptional,
+                        icon: Icons.lightbulb_outline_rounded,
                         theme: theme,
                         maxLines: 2,
                         isRequired: false,

@@ -1123,6 +1123,8 @@ Responde ÚNICAMENTE con el JSON solicitado.
             }
           }
         }
+      } else if (response.statusCode == 503) {
+        throw Exception('El modelo de IA está sobrecargado. Por favor, intenta de nuevo en unos momentos.');
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
@@ -1236,6 +1238,131 @@ Responde ÚNICAMENTE con el JSON solicitado.
             }
           }
         }
+      } else if (response.statusCode == 503) {
+        throw Exception('El modelo de IA está sobrecargado. Por favor, intenta de nuevo en unos momentos.');
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error consultando Gemini: $e');
+    }
+    return null;
+  }
+
+  /// Genera un ejemplo y su traducción (ahorro de tokens)
+  Future<Map<String, dynamic>?> generateExampleWithTranslation({
+    required String word,
+    required String contextSentence,
+    String sourceLang = 'Inglés',
+    String targetLang = 'Español',
+    String? bookInfo,
+  }) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('📝 Generando ejemplo para: $word');
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      // Estructura del JSON Schema para ejemplo y traducción
+      final jsonSchema = {
+        "type": "object",
+        "properties": {
+          "example_original": {
+            "type": "string",
+            "description": "Oración de ejemplo usando la palabra en su forma exacta"
+          },
+          "example_translation": {
+            "type": "string",
+            "description": "Traducción natural del ejemplo al idioma destino"
+          }
+        },
+        "required": ["example_original", "example_translation"]
+      };
+
+      final prompt = """
+CONTEXTO DEL ANÁLISIS:
+- Palabra a ejemplificar: '$word'
+- Contexto de referencia: '$contextSentence'
+- Idioma origen: $sourceLang
+- Idioma destino: $targetLang
+${bookInfo != null && bookInfo.isNotEmpty ? '- Fuente de referencia: $bookInfo' : ''}
+
+INSTRUCCIONES:
+Actúa como profesor de idiomas experto. Crea una oración de ejemplo educativa para la palabra '$word' siguiendo estas reglas:
+
+1. EJEMPLO ORIGINAL (example_original):
+   - Usa '$word' EXACTAMENTE como aparece (mismo tiempo verbal, número, persona)
+   - NO uses la forma base si la palabra está conjugada/declinada
+   - Crea una oración clara, simple y educativa
+   - La oración debe ser diferente al contexto de referencia
+   - Ejemplos correctos:
+     * Si word = "became" → "She became a doctor" (NO "become")
+     * Si word = "children" → "The children played" (NO "child")
+     * Si word = "better" → "This is better" (NO "good")
+
+2. TRADUCCIÓN DEL EJEMPLO (example_translation):
+   - Traduce de forma NATURAL y FLUIDA como hablaría un nativo
+   - Evita traducciones palabra-por-palabra o literales
+   - Respeta el tiempo verbal y concordancia
+   - Usa vocabulario común del $targetLang
+   - Ejemplos:
+     * "She became a doctor" → [translate:Se convirtió en doctora] (NO [translate:Ella se convirtió en una doctora])
+     * "The children played" → [translate:Los niños jugaron]
+     * "This is better" → [translate:Esto es mejor]
+
+3. CALIDAD EDUCATIVA:
+   - El ejemplo debe reforzar el significado de la palabra
+   - Debe ser memorable y fácil de entender
+   - Contexto cotidiano y relevante
+
+Responde ÚNICAMENTE con el JSON solicitado.
+""";
+
+      print('--- PROMPT ENVIADO A GEMINI (EJEMPLO) ---');
+      print(prompt);
+      print('-------------------------------');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": prompt
+            }]
+          }],
+          "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": jsonSchema
+          }
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      print('--- RESPUESTA DE GEMINI (EJEMPLO) ---');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('---------------------------');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              try {
+                return jsonDecode(text) as Map<String, dynamic>;
+              } catch (e) {
+                print('Error parsing JSON: $e');
+                print('Text received: $text');
+              }
+            }
+          }
+        }
+      } else if (response.statusCode == 503) {
+        throw Exception('El modelo de IA está sobrecargado. Por favor, intenta de nuevo en unos momentos.');
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
