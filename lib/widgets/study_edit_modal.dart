@@ -52,11 +52,14 @@ class _StudyEditModalState extends State<StudyEditModal> {
   bool _cardExists = false;
   bool _isFormValid = false;
   bool _isRegeneratingDefinitions = false;
+  bool _isRegeneratingContextTranslation = false;
   String? _definitionSource;
   List<String> _wordDefinitions = [];
   List<List<String>> _definitionsHistory = [];
   int _currentDefinitionIndex = 0;
   List<String> _irregularForms = [];
+  List<String> _contextTranslationHistory = [];
+  int _currentContextTranslationIndex = 0;
 
   @override
   void initState() {
@@ -87,6 +90,11 @@ class _StudyEditModalState extends State<StudyEditModal> {
       _exampleController = TextEditingController(text: data['example_original'] ?? '');
       _exampleTranslationController.text = data['example_translation'] ?? '';
       _contextTranslationController.text = data['context_translation'] ?? '';
+      
+      if (_contextTranslationController.text.isNotEmpty) {
+        _contextTranslationHistory = [_contextTranslationController.text];
+        _currentContextTranslationIndex = 0;
+      }
       
       // Mantenemos el controlador de definición por compatibilidad, aunque la UI usará la lista
       _definitionController = TextEditingController(text: '');
@@ -187,46 +195,92 @@ class _StudyEditModalState extends State<StudyEditModal> {
   }
 
   Future<void> _regenerateDefinitions() async {
-    setState(() => _isRegeneratingDefinitions = true);
-    
-    try {
-      // Guardar el estado actual en el historial antes de regenerar
-      // (Aunque ya debería estar sincronizado, aseguramos)
-      if (_definitionsHistory.isNotEmpty) {
-        _definitionsHistory[_currentDefinitionIndex] = List.from(_wordDefinitions);
-      }
+    if (_wordController.text.isEmpty || _contextController.text.isEmpty) return;
 
+    setState(() {
+      _isRegeneratingDefinitions = true;
+    });
+
+    try {
       final result = await _dictionaryService.analyzeWordForDefinitions(
         word: _wordController.text,
         contextSentence: _contextController.text,
-        sourceLang: 'Inglés', // TODO: Obtener del libro
-        targetLang: 'Español',
         bookInfo: widget.bookTitle,
       );
 
       if (mounted && result != null && result['word_definitions'] != null) {
         final newDefinitions = List<String>.from(result['word_definitions']);
-        
-        setState(() {
-          _definitionsHistory.add(newDefinitions);
-          _currentDefinitionIndex = _definitionsHistory.length - 1;
-          _wordDefinitions = List.from(newDefinitions);
-          _isRegeneratingDefinitions = false;
-        });
-        
-        _validateForm();
-      } else {
-        if (mounted) {
-          setState(() => _isRegeneratingDefinitions = false);
-          PremiumToast.show(context, "No se pudieron generar nuevas definiciones.", isError: true);
+        if (newDefinitions.isNotEmpty) {
+          setState(() {
+            _wordDefinitions = newDefinitions;
+            // Añadir al historial
+            _definitionsHistory.add(List<String>.from(newDefinitions));
+            _currentDefinitionIndex = _definitionsHistory.length - 1;
+          });
         }
       }
     } catch (e) {
-      debugPrint('Error regenerating definitions: $e');
       if (mounted) {
-        setState(() => _isRegeneratingDefinitions = false);
-        PremiumToast.show(context, "Error al regenerar definiciones.", isError: true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al regenerar definiciones: $e')),
+        );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRegeneratingDefinitions = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _regenerateContextTranslation() async {
+    if (_contextController.text.isEmpty) return;
+
+    setState(() {
+      _isRegeneratingContextTranslation = true;
+    });
+
+    try {
+      final result = await _dictionaryService.translateContextSentence(
+        word: _wordController.text,
+        contextSentence: _contextController.text,
+        bookInfo: widget.bookTitle,
+      );
+
+      if (mounted && result != null && result['context_translation'] != null) {
+        final newTranslation = result['context_translation'] as String;
+        if (newTranslation.isNotEmpty) {
+          setState(() {
+            _contextTranslationController.text = newTranslation;
+            // Añadir al historial
+            _contextTranslationHistory.add(newTranslation);
+            _currentContextTranslationIndex = _contextTranslationHistory.length - 1;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al regenerar traducción: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRegeneratingContextTranslation = false;
+        });
+      }
+    }
+  }
+
+  void _navigateContextTranslationHistory(int direction) {
+    final newIndex = _currentContextTranslationIndex + direction;
+    if (newIndex >= 0 && newIndex < _contextTranslationHistory.length) {
+      setState(() {
+        _currentContextTranslationIndex = newIndex;
+        _contextTranslationController.text = _contextTranslationHistory[newIndex];
+      });
     }
   }
 
@@ -579,13 +633,100 @@ class _StudyEditModalState extends State<StudyEditModal> {
                       ),
                       
                       const SizedBox(height: 16),
-                      _buildModernTextField(
-                        controller: _contextTranslationController,
-                        label: 'Traducción del Contexto',
-                        icon: Icons.g_translate_rounded,
-                        theme: theme,
-                        maxLines: 2,
-                        isRequired: false,
+                      // Context Translation Field with Regeneration
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.g_translate_rounded, size: 16, color: colorScheme.primary),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Traducción del Contexto',
+                                        style: textTheme.labelLarge?.copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_contextTranslationHistory.length > 1) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_left_rounded),
+                                      onPressed: _currentContextTranslationIndex > 0 
+                                          ? () => _navigateContextTranslationHistory(-1) 
+                                          : null,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 20,
+                                      color: colorScheme.primary,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        '${_currentContextTranslationIndex + 1}/${_contextTranslationHistory.length}',
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.chevron_right_rounded),
+                                      onPressed: _currentContextTranslationIndex < _contextTranslationHistory.length - 1 
+                                          ? () => _navigateContextTranslationHistory(1) 
+                                          : null,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 20,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  if (_isRegeneratingContextTranslation)
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colorScheme.primary,
+                                      ),
+                                    )
+                                  else
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh_rounded),
+                                      onPressed: _regenerateContextTranslation,
+                                      tooltip: 'Regenerar con IA',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      iconSize: 18,
+                                      color: colorScheme.primary,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _buildModernTextField(
+                            controller: _contextTranslationController,
+                            label: '',
+                            icon: null,
+                            theme: theme,
+                            maxLines: 2,
+                            isRequired: false,
+                          ),
+                        ],
                       ),
                     ],
                     
@@ -636,7 +777,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
   Widget _buildModernTextField({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
+    IconData? icon,
     required ThemeData theme,
     int maxLines = 1,
     bool isLoading = false,
@@ -656,9 +797,9 @@ class _StudyEditModalState extends State<StudyEditModal> {
           color: colorScheme.onSurface,
         ),
         decoration: InputDecoration(
-          labelText: label,
+          labelText: label.isNotEmpty ? label : null,
           labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-          prefixIcon: Icon(icon, color: colorScheme.primary.withOpacity(0.7)),
+          prefixIcon: icon != null ? Icon(icon, color: colorScheme.primary.withOpacity(0.7)) : null,
           suffixIcon: isLoading 
             ? Padding(
                 padding: const EdgeInsets.all(12.0),

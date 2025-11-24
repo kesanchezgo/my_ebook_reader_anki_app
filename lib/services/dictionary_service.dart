@@ -1131,4 +1131,117 @@ Responde ÚNICAMENTE con el JSON solicitado.
     }
     return null;
   }
+
+  /// Traduce una oración de contexto (ahorro de tokens)
+  Future<Map<String, dynamic>?> translateContextSentence({
+    required String word,
+    required String contextSentence,
+    String sourceLang = 'Inglés',
+    String targetLang = 'Español',
+    String? bookInfo,
+  }) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('🌍 Traduciendo contexto para: $word');
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      // Estructura del JSON Schema para solo traducción
+      final jsonSchema = {
+        "type": "object",
+        "properties": {
+          "context_translation": {
+            "type": "string",
+            "description": "Traducción natural y fluida del contexto al idioma destino"
+          }
+        },
+        "required": ["context_translation"]
+      };
+
+      final prompt = """
+CONTEXTO DEL ANÁLISIS:
+- Palabra clave: '$word'
+- Oración a traducir: '$contextSentence'
+- Idioma origen: $sourceLang
+- Idioma destino: $targetLang
+${bookInfo != null && bookInfo.isNotEmpty ? '- Fuente literaria: $bookInfo' : ''}
+
+INSTRUCCIONES:
+Actúa como traductor literario experto, bilingüe en $sourceLang y $targetLang.
+
+Traduce la oración proporcionada siguiendo estas reglas:
+
+1. NATURALIDAD ABSOLUTA:
+   - Traduce como hablaría un nativo del $targetLang
+   - Evita traducciones palabra-por-palabra o literales
+   - Usa vocabulario común y expresiones naturales
+
+2. PRECISIÓN LINGÜÍSTICA:
+   - Respeta el tiempo verbal original
+   - Mantén la concordancia gramatical correcta
+   - Preserva el significado y matices del texto
+
+3. EJEMPLOS DE TRADUCCIONES NATURALES:
+   - [translate:Perhaps the thing became...] → [translate:Quizás aquello se convirtió...] (NO [translate:Quizás la cosa se convirtió...])
+   - [translate:the thing] → [translate:aquello, eso] (NO [translate:la cosa])
+   - [translate:It is important that...] → [translate:Es importante que...]
+
+4. PRIORIDAD:
+   NATURALIDAD > CLARIDAD > Literalidad
+${bookInfo != null && bookInfo.isNotEmpty ? '\n5. ESTILO LITERARIO:\n   - Respeta el registro y tono de la obra original\n   - Mantén la calidad literaria en la traducción' : ''}
+
+Responde ÚNICAMENTE con el JSON solicitado.
+""";
+
+      print('--- PROMPT ENVIADO A GEMINI (TRADUCCIÓN CONTEXTO) ---');
+      print(prompt);
+      print('-------------------------------');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": prompt
+            }]
+          }],
+          "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": jsonSchema
+          }
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      print('--- RESPUESTA DE GEMINI (TRADUCCIÓN CONTEXTO) ---');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('---------------------------');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              try {
+                return jsonDecode(text) as Map<String, dynamic>;
+              } catch (e) {
+                print('Error parsing JSON: $e');
+                print('Text received: $text');
+              }
+            }
+          }
+        }
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error consultando Gemini: $e');
+    }
+    return null;
+  }
 }
