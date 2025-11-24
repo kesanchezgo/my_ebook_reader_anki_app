@@ -39,7 +39,9 @@ class _StudyEditModalState extends State<StudyEditModal> {
   late TextEditingController _wordController;
   late TextEditingController _definitionController;
   late TextEditingController _contextController;
+  late TextEditingController _contextTranslationController;
   late TextEditingController _exampleController;
+  late TextEditingController _exampleTranslationController;
   
   final StudyDatabaseService _studyDatabase = StudyDatabaseService();
   final DictionaryService _dictionaryService = DictionaryService();
@@ -50,24 +52,40 @@ class _StudyEditModalState extends State<StudyEditModal> {
   bool _cardExists = false;
   bool _isFormValid = false;
   String? _definitionSource;
+  List<String> _wordDefinitions = [];
+  List<String> _irregularForms = [];
 
   @override
   void initState() {
     super.initState();
     _wordController = TextEditingController(text: widget.word);
     _contextController = TextEditingController(text: widget.context);
+    _exampleTranslationController = TextEditingController();
+    _contextTranslationController = TextEditingController();
     
     // Lógica de inicialización según modo
     if (widget.mode == StudyCardType.acquisition && widget.learningData != null) {
       // Modo Learning: Usar datos de IA
       final data = widget.learningData!;
-      _definitionController = TextEditingController(text: data['context_translation'] ?? '');
       
-      String example = data['example_original'] ?? '';
-      if (data['example_translation'] != null) {
-        example += '\n(${data['example_translation']})';
+      // Cargar definiciones
+      if (data['word_definitions'] != null) {
+        _wordDefinitions = List<String>.from(data['word_definitions']);
       }
-      _exampleController = TextEditingController(text: example);
+      
+      // Cargar formas irregulares
+      if (data['irregular_forms'] != null) {
+        _irregularForms = List<String>.from(data['irregular_forms']);
+      }
+
+      // Cargar ejemplos
+      _exampleController = TextEditingController(text: data['example_original'] ?? '');
+      _exampleTranslationController.text = data['example_translation'] ?? '';
+      _contextTranslationController.text = data['context_translation'] ?? '';
+      
+      // Mantenemos el controlador de definición por compatibilidad, aunque la UI usará la lista
+      _definitionController = TextEditingController(text: '');
+      
       _definitionSource = 'Gemini AI (Learning)';
     } else {
       // Modo Native: Usar datos pasados o buscar
@@ -104,8 +122,15 @@ class _StudyEditModalState extends State<StudyEditModal> {
   }
 
   void _validateForm() {
-    final isValid = _wordController.text.trim().isNotEmpty && 
-                    _definitionController.text.trim().isNotEmpty;
+    bool isValid = _wordController.text.trim().isNotEmpty;
+
+    if (widget.mode == StudyCardType.acquisition) {
+      // En modo Acquisition, validamos que haya al menos una definición en la lista
+      isValid = isValid && _wordDefinitions.isNotEmpty;
+    } else {
+      // En modo Enrichment, validamos el campo de texto de definición
+      isValid = isValid && _definitionController.text.trim().isNotEmpty;
+    }
     
     if (isValid != _isFormValid) {
       setState(() => _isFormValid = isValid);
@@ -187,15 +212,17 @@ class _StudyEditModalState extends State<StudyEditModal> {
       if (widget.mode == StudyCardType.acquisition) {
         content['sourceLang'] = 'en'; // TODO: Detectar dinámicamente
         content['targetLang'] = 'es';
+        content['example_translation'] = _exampleTranslationController.text;
+        content['context_translation'] = _contextTranslationController.text;
+        content['word_definitions'] = _wordDefinitions;
+        content['irregular_forms'] = _irregularForms;
         
-        // Guardar datos extra de IA si existen
-        if (widget.learningData != null) {
-          if (widget.learningData!['irregular_forms'] != null) {
-            content['irregular_forms'] = widget.learningData!['irregular_forms'];
-          }
-          if (widget.learningData!['word_definitions'] != null) {
-            content['word_definitions'] = widget.learningData!['word_definitions'];
-          }
+        // En modo Acquisition, la definición principal es la primera de la lista
+        if (_wordDefinitions.isNotEmpty) {
+          content['definition'] = _wordDefinitions.first;
+        } else if (_definitionController.text.isNotEmpty) {
+           // Fallback por si acaso
+           content['definition'] = _definitionController.text;
         }
       } else {
         content['sourceLang'] = 'es';
@@ -235,7 +262,9 @@ class _StudyEditModalState extends State<StudyEditModal> {
     _wordController.dispose();
     _definitionController.dispose();
     _contextController.dispose();
+    _contextTranslationController.dispose();
     _exampleController.dispose();
+    _exampleTranslationController.dispose();
     super.dispose();
   }
 
@@ -291,7 +320,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                   const SizedBox(width: 12),
                   Text(
                     widget.mode == StudyCardType.acquisition 
-                        ? l10n.createStudyCard // "Ficha de Adquisición" si tuvieras la key, por ahora reuso
+                        ? l10n.createStudyCard
                         : l10n.createStudyCard,
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -329,121 +358,65 @@ class _StudyEditModalState extends State<StudyEditModal> {
                   ),
                 ),
   
-              // Word Input
+              // 1. Word Input
               _buildModernTextField(
                 controller: _wordController,
                 label: l10n.word,
                 icon: Icons.translate_rounded,
                 theme: theme,
               ),
-              const SizedBox(height: 16),
               
-              // Definition Source Chip
-              if (_definitionSource != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, left: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.source(_definitionSource!),
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+              // 2 & 3. Definitions & Irregular Forms (Acquisition) OR Definition (Enrichment)
+              if (widget.mode == StudyCardType.acquisition) ...[
+                _buildDynamicList(
+                  title: 'Definiciones',
+                  items: _wordDefinitions,
+                  icon: Icons.menu_book_rounded,
+                  theme: theme,
+                  addItemLabel: 'Agregar definición',
                 ),
-  
-              // Definition Input (Or Translation in Learning Mode)
-              _buildModernTextField(
-                controller: _definitionController,
-                label: widget.mode == StudyCardType.acquisition ? 'Traducción' : l10n.definition,
-                icon: widget.mode == StudyCardType.acquisition ? Icons.g_translate_rounded : Icons.menu_book_rounded,
-                theme: theme,
-                maxLines: 3,
-                isLoading: _isSearching,
-              ),
-              
-              // Learning Mode: Word Definitions Suggestions
-              if (widget.mode == StudyCardType.acquisition && 
-                  widget.learningData != null && 
-                  widget.learningData!['word_definitions'] != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: (widget.learningData!['word_definitions'] as List).map<Widget>((def) {
-                      return ActionChip(
-                        label: Text(def.toString(), style: textTheme.bodySmall),
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        side: BorderSide.none,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        onPressed: () {
-                          final currentText = _definitionController.text;
-                          if (currentText.isEmpty) {
-                            _definitionController.text = def.toString();
-                          } else {
-                            _definitionController.text = '$currentText\n${def.toString()}';
-                          }
-                        },
-                      );
-                    }).toList(),
-                  ),
+                
+                _buildDynamicList(
+                  title: 'Formas Irregulares',
+                  items: _irregularForms,
+                  icon: Icons.change_circle_outlined,
+                  theme: theme,
+                  addItemLabel: 'Agregar forma irregular',
                 ),
-
-              // Learning Mode: Irregular Forms
-              if (widget.mode == StudyCardType.acquisition &&
-                  widget.learningData != null && 
-                  widget.learningData!['irregular_forms'] != null && 
-                  (widget.learningData!['irregular_forms'] as List).isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.tertiaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colorScheme.tertiary.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, size: 14, color: colorScheme.tertiary),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Formas Irregulares',
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.tertiary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                const SizedBox(height: 16),
+              ] else ...[
+                const SizedBox(height: 16),
+                // Definition Source Chip
+                if (_definitionSource != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8, left: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_awesome, size: 14, color: colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.source(_definitionSource!),
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        children: (widget.learningData!['irregular_forms'] as List).map<Widget>((form) {
-                          return Chip(
-                            label: Text(form.toString(), style: textTheme.bodySmall),
-                            backgroundColor: colorScheme.surface,
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            side: BorderSide(color: colorScheme.tertiary.withOpacity(0.3)),
-                          );
-                        }).toList(),
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+    
+                _buildModernTextField(
+                  controller: _definitionController,
+                  label: l10n.definition,
+                  icon: Icons.menu_book_rounded,
+                  theme: theme,
+                  maxLines: 3,
+                  isLoading: _isSearching,
                 ),
+                const SizedBox(height: 16),
+              ],
 
-              const SizedBox(height: 16),
-  
-              // Example Input (Optional)
+              // 4. Example Input
               _buildModernTextField(
                 controller: _exampleController,
                 label: l10n.exampleOptional,
@@ -452,9 +425,23 @@ class _StudyEditModalState extends State<StudyEditModal> {
                 maxLines: 2,
                 isRequired: false,
               ),
+              
+              // 5. Example Translation (Acquisition only)
+              if (widget.mode == StudyCardType.acquisition) ...[
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  controller: _exampleTranslationController,
+                  label: 'Traducción del Ejemplo',
+                  icon: Icons.g_translate_rounded,
+                  theme: theme,
+                  maxLines: 2,
+                  isRequired: false,
+                ),
+              ],
+              
               const SizedBox(height: 16),
   
-              // Context Input
+              // 6. Context
               if (widget.mode == StudyCardType.enrichment) ...[
                 _buildModernTextField(
                   controller: _contextController,
@@ -490,14 +477,20 @@ class _StudyEditModalState extends State<StudyEditModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Oración Original',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.text_snippet_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Contexto Original',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
                         _contextController.text,
                         style: textTheme.bodyMedium?.copyWith(
@@ -507,6 +500,16 @@ class _StudyEditModalState extends State<StudyEditModal> {
                       ),
                     ],
                   ),
+                ),
+                
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  controller: _contextTranslationController,
+                  label: 'Traducción del Contexto',
+                  icon: Icons.g_translate_rounded,
+                  theme: theme,
+                  maxLines: 2,
+                  isRequired: false,
                 ),
               ],
               
@@ -539,7 +542,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                         style: textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
-                          color: colorScheme.onPrimary, // Forzar color para contraste
+                          color: colorScheme.onPrimary,
                         ),
                       ),
                 ),
@@ -598,5 +601,138 @@ class _StudyEditModalState extends State<StudyEditModal> {
         },
       ),
     );
+  }
+
+  Widget _buildDynamicList({
+    required String title,
+    required List<String> items,
+    required IconData icon,
+    required ThemeData theme,
+    required String addItemLabel,
+  }) {
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No hay elementos',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(item, style: textTheme.bodyMedium),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    color: colorScheme.error,
+                    onPressed: () {
+                      setState(() {
+                        items.removeAt(index);
+                        _validateForm();
+                      });
+                    },
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.errorContainer.withOpacity(0.2),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _showAddItemDialog(items, addItemLabel),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(addItemLabel),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colorScheme.primary,
+              side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddItemDialog(List<String> list, String title) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Escribe aquí...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.trim().isNotEmpty) {
+      setState(() {
+        list.add(result.trim());
+        _validateForm();
+      });
+    }
   }
 }
