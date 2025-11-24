@@ -65,6 +65,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   final Map<int, double> _chaptersProgressMap = {};
   bool _canPop = false;
   
+  late Book _book; // Libro con estado local mutable (para configuración)
+  
   // Estado temporal para selección manual de contexto
   Map<String, dynamic>? _pendingStudyData;
   
@@ -95,6 +97,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
+    _book = widget.book;
     WidgetsBinding.instance.addObserver(this);
     _chaptersFuture = EpubService().loadChapters(File(widget.book.filePath));
     _loadSettings();
@@ -115,7 +118,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
   }
 
   Book _getCurrentBookState() {
-    return widget.book.copyWith(
+    return _book.copyWith(
       currentPage: _currentChapterIndex,
       progressPercentage: _globalProgress * 100,
     );
@@ -183,10 +186,12 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       
       // Guardar también el progreso global en el objeto Book
       if (mounted) {
-        final updatedBook = widget.book.copyWith(
+        final updatedBook = _book.copyWith(
           currentPage: index,
           progressPercentage: _globalProgress * 100,
         );
+        // Actualizamos _book localmente también para mantener consistencia
+        _book = updatedBook;
         context.read<BibliotecaBloc>().add(UpdateBook(updatedBook));
       }
     } catch (e) {
@@ -446,6 +451,74 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                   ),
                   
                   const SizedBox(height: 24),
+
+                  // Modo de Lectura
+                  Text(
+                    l10n.readingMode,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildModeOption(
+                          context,
+                          title: l10n.nativeMode,
+                          subtitle: l10n.nativeModeDesc,
+                          icon: Icons.school_rounded,
+                          isSelected: _book.studyMode == 'native_vocab' || _book.studyMode == null,
+                          onTap: () {
+                            setState(() {
+                              _book = _book.copyWith(studyMode: 'native_vocab');
+                            });
+                            setModalState(() {});
+                            context.read<BibliotecaBloc>().add(UpdateBook(_book));
+                          },
+                        ),
+                        Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant.withOpacity(0.2)),
+                        _buildModeOption(
+                          context,
+                          title: l10n.studyMode,
+                          subtitle: l10n.studyModeDesc,
+                          icon: Icons.translate_rounded,
+                          isSelected: _book.studyMode == 'learn_language',
+                          onTap: () {
+                            setState(() {
+                              _book = _book.copyWith(studyMode: 'learn_language');
+                            });
+                            setModalState(() {});
+                            context.read<BibliotecaBloc>().add(UpdateBook(_book));
+                          },
+                        ),
+                        Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant.withOpacity(0.2)),
+                        _buildModeOption(
+                          context,
+                          title: l10n.readOnlyMode,
+                          subtitle: l10n.readOnlyModeDesc,
+                          icon: Icons.menu_book_rounded,
+                          isSelected: _book.studyMode == 'read_only',
+                          onTap: () {
+                            setState(() {
+                              _book = _book.copyWith(studyMode: 'read_only');
+                            });
+                            setModalState(() {});
+                            context.read<BibliotecaBloc>().add(UpdateBook(_book));
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+
+                  
+                  const SizedBox(height: 24),
                 ],
               ),
             );
@@ -492,6 +565,64 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeOption(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
           ],
         ),
       ),
@@ -786,8 +917,12 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         }
 
                         // --- MODO APRENDIZAJE (AI) ---
-                        final studyMode = SettingsService.instance.studyMode;
-                        if (studyMode == 'learning' && _readerMode == ReaderMode.reading && _pendingStudyData == null) {
+                        // Priorizar configuración del libro, luego global
+                        final bookMode = _book.studyMode;
+                        final globalMode = SettingsService.instance.studyMode;
+                        final isLearningMode = bookMode == 'learn_language' || (bookMode == null && globalMode == 'learning');
+                        
+                        if (isLearningMode && (_readerMode == ReaderMode.reading || _readerMode == ReaderMode.capturingWord) && _pendingStudyData == null) {
                            setState(() => _isAnalyzing = true);
                            
 
@@ -796,8 +931,8 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                            final result = await _dictionaryService.analyzeWordForLearning(
                              word: _currentSelection,
                              contextSentence: _currentSelection, 
-                             sourceLang: 'Inglés', // TODO: Detectar idioma del libro
-                             targetLang: 'Español'
+                             sourceLang: _book.language ?? 'Inglés', 
+                             targetLang: _book.targetLanguage ?? 'Español'
                            );
 
                            if (!mounted) return;
@@ -873,6 +1008,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                             context: initialContext,
                             initialDefinition: initialDefinition,
                             initialExample: initialExample,
+                            mode: isLearningMode ? StudyCardType.acquisition : StudyCardType.enrichment,
                           ),
                         );
 
@@ -1088,7 +1224,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         ),
       ),
     ),
-  );
+    );
   }
 
   String _getAnalyzingMessage(AppLocalizations l10n) {
