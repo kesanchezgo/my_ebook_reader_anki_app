@@ -1021,4 +1021,114 @@ Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
     }
     return null;
   }
+
+  /// Analiza una palabra para obtener SOLO definiciones (ahorro de tokens)
+  Future<Map<String, dynamic>?> analyzeWordForDefinitions({
+    required String word,
+    required String contextSentence,
+    String sourceLang = 'Inglés',
+    String targetLang = 'Español',
+    String? bookInfo,
+  }) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('🎓 Analizando palabra para definiciones: $word');
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      // Estructura del JSON Schema para solo definiciones
+      final jsonSchema = {
+        "type": "object",
+        "properties": {
+          "word_definitions": {
+            "type": "array",
+            "description": "Lista de definiciones con categoría gramatical y sinónimos",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["word_definitions"]
+      };
+
+      final prompt = """
+CONTEXTO DEL ANÁLISIS:
+- Palabra a analizar: '$word'
+- Oración de contexto: '$contextSentence'
+- Idioma origen: $sourceLang
+- Idioma destino: $targetLang
+${bookInfo != null && bookInfo.isNotEmpty ? '- Fuente: $bookInfo' : ''}
+
+CATEGORÍAS GRAMATICALES VÁLIDAS:
+(n.) sustantivo | (pron.) pronombre | (v.) verbo | (adj.) adjetivo | (adv.) adverbio
+(prep.) preposición | (conj.) conjunción | (interj.) interjección | (art.) artículo | (det.) determinante
+
+INSTRUCCIONES:
+Actúa como profesor de idiomas experto. Analiza la palabra '$word' en el contexto proporcionado y genera SOLO las definiciones siguiendo estas reglas:
+
+1. Agrupa sinónimos separados por comas dentro de cada entrada
+2. Formato: "(categoría) sinónimo1, sinónimo2, sinónimo3"
+3. Usa traducciones NATURALES y comunes (NO literales)
+4. Ejemplos correctos:
+   - "(n.) obsesión, fijación, manía"
+   - "(v.) convertirse, transformarse, volverse"
+   - "(adj.) extraño, peculiar, raro"
+5. Incluye TODAS las categorías gramaticales aplicables
+6. NO incluyas artículos (el/la/un/una) en los sinónimos
+7. Prioriza vocabulario común del $targetLang nativo
+
+Responde ÚNICAMENTE con el JSON solicitado.
+""";
+
+      print('--- PROMPT ENVIADO A GEMINI (DEFINICIONES) ---');
+      print(prompt);
+      print('-------------------------------');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": prompt
+            }]
+          }],
+          "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": jsonSchema
+          }
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      print('--- RESPUESTA DE GEMINI (DEFINICIONES) ---');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      print('---------------------------');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              try {
+                return jsonDecode(text) as Map<String, dynamic>;
+              } catch (e) {
+                print('Error parsing JSON: $e');
+                print('Text received: $text');
+              }
+            }
+          }
+        }
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error consultando Gemini: $e');
+    }
+    return null;
+  }
 }

@@ -196,7 +196,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
         _definitionsHistory[_currentDefinitionIndex] = List.from(_wordDefinitions);
       }
 
-      final result = await _dictionaryService.analyzeWordForLearning(
+      final result = await _dictionaryService.analyzeWordForDefinitions(
         word: _wordController.text,
         contextSentence: _contextController.text,
         sourceLang: 'Inglés', // TODO: Obtener del libro
