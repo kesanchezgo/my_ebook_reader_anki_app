@@ -187,6 +187,16 @@ class _StudyEditModalState extends State<StudyEditModal> {
       if (widget.mode == StudyCardType.acquisition) {
         content['sourceLang'] = 'en'; // TODO: Detectar dinámicamente
         content['targetLang'] = 'es';
+        
+        // Guardar datos extra de IA si existen
+        if (widget.learningData != null) {
+          if (widget.learningData!['irregular_forms'] != null) {
+            content['irregular_forms'] = widget.learningData!['irregular_forms'];
+          }
+          if (widget.learningData!['word_definitions'] != null) {
+            content['word_definitions'] = widget.learningData!['word_definitions'];
+          }
+        }
       } else {
         content['sourceLang'] = 'es';
         content['targetLang'] = 'es';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import 'biblioteca_screen.dart';
 import 'vocabulario_screen.dart';
+import 'idiomas_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = const [
     BibliotecaScreen(),
     VocabularioScreen(),
+    IdiomasScreen(),
   ];
 
   @override
@@ -50,6 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.style_outlined),
             selectedIcon: const Icon(Icons.style_rounded),
             label: l10n.myVocabulary,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.language_outlined),
+            selectedIcon: const Icon(Icons.language_rounded),
+            label: 'Idiomas', // TODO: Add l10n key
           ),
         ],
       ),

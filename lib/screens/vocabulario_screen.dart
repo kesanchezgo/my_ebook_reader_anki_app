@@ -26,7 +26,6 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   List<StudyCard> _cards = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  int _selectedTabIndex = 0; // 0: Vocabulario (Enrichment), 1: Idiomas (Acquisition)
   StreamSubscription? _dbSubscription;
   
   @override
@@ -59,13 +58,9 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   }
   
   List<StudyCard> get _filteredCards {
-    // 1. Filtrar por tipo (Tab)
+    // 1. Filtrar por tipo (Solo Enrichment)
     final typeFiltered = _cards.where((card) {
-      if (_selectedTabIndex == 0) {
-        return card.type == StudyCardType.enrichment;
-      } else {
-        return card.type == StudyCardType.acquisition;
-      }
+      return card.type == StudyCardType.enrichment;
     }).toList();
 
     // 2. Filtrar por búsqueda
@@ -570,47 +565,6 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     );
   }
   
-  Widget _buildTabButton(
-    BuildContext context, {
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon, 
-              size: 18, 
-              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -648,37 +602,6 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       ),
       body: Column(
         children: [
-          // Tabs de Filtrado
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTabButton(
-                    context, 
-                    label: l10n.myVocabulary, // Usamos myVocabulary que ya existe
-                    icon: Icons.book_rounded,
-                    isSelected: _selectedTabIndex == 0,
-                    onTap: () => setState(() => _selectedTabIndex = 0),
-                  ),
-                ),
-                Expanded(
-                  child: _buildTabButton(
-                    context, 
-                    label: 'Idiomas', // TODO: Add l10n key
-                    icon: Icons.language_rounded,
-                    isSelected: _selectedTabIndex == 1,
-                    onTap: () => setState(() => _selectedTabIndex = 1),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Barra de búsqueda
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -749,14 +672,14 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _selectedTabIndex == 0 ? Icons.speaker_notes_off_rounded : Icons.language_rounded,
+                              Icons.speaker_notes_off_rounded,
                               size: 80,
                               color: colorScheme.outlineVariant,
                             ),
                             const SizedBox(height: 24),
                             Text(
                               _searchQuery.isEmpty
-                                  ? (_selectedTabIndex == 0 ? l10n.noCardsSaved : 'No hay fichas de idiomas')
+                                  ? l10n.noCardsSaved
                                   : l10n.noResultsFound,
                               style: TextStyle(
                                 fontSize: 18,
@@ -769,9 +692,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
-                                  _selectedTabIndex == 0 
-                                      ? l10n.vocabularyEmptyState
-                                      : 'Activa el modo "Aprender" en ajustes y selecciona palabras para crear fichas de adquisición.',
+                                  l10n.vocabularyEmptyState,
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: colorScheme.onSurfaceVariant.withOpacity(0.8),
