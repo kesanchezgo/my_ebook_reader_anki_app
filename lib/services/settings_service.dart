@@ -27,6 +27,7 @@ class SettingsService {
   static const String _keyOpenRouterApiKey = 'openrouter_api_key';
   static const String _keyDictionaryPriority = 'dictionary_priority';
   static const String _keyContextPriority = 'context_priority';
+  static const String _keyStudyMode = 'study_mode';
 
   // Defaults
   static const String _defaultFontFamily = 'Merriweather';
@@ -39,6 +40,7 @@ class SettingsService {
   static const String _defaultOpenRouterApiKey = '';
   static const List<String> _defaultDictionaryPriority = ['gemini', 'perplexity', 'openrouter', 'local', 'web'];
   static const List<String> _defaultContextPriority = ['gemini', 'perplexity', 'openrouter'];
+  static const String _defaultStudyMode = 'native';
 
   // Current State
   String _fontFamily = _defaultFontFamily;
@@ -51,6 +53,7 @@ class SettingsService {
   String _openRouterApiKey = _defaultOpenRouterApiKey;
   List<String> _dictionaryPriority = _defaultDictionaryPriority;
   List<String> _contextPriority = _defaultContextPriority;
+  String _studyMode = _defaultStudyMode;
 
   // Getters
   String get fontFamily => _fontFamily;
@@ -63,6 +66,7 @@ class SettingsService {
   String get openRouterApiKey => _openRouterApiKey;
   List<String> get dictionaryPriority => _dictionaryPriority;
   List<String> get contextPriority => _contextPriority;
+  String get studyMode => _studyMode;
 
   // Themes Definition (Delegated to AppTheme)
   Map<String, AppTheme> get appThemes => AppTheme.themes;
@@ -114,6 +118,7 @@ class SettingsService {
     _openRouterApiKey = _prefs!.getString(_keyOpenRouterApiKey) ?? _defaultOpenRouterApiKey;
     _dictionaryPriority = _prefs!.getStringList(_keyDictionaryPriority) ?? _defaultDictionaryPriority;
     _contextPriority = _prefs!.getStringList(_keyContextPriority) ?? _defaultContextPriority;
+    _studyMode = _prefs!.getString(_keyStudyMode) ?? _defaultStudyMode;
 
     // Migración: Asegurar que todas las opciones por defecto estén en la lista (para nuevos proveedores como openrouter)
     bool changed = false;
@@ -232,6 +237,13 @@ class SettingsService {
     await _prefs!.setStringList(_keyContextPriority, value);
   }
 
+  /// Guarda el modo de estudio ('native' o 'learning')
+  Future<void> setStudyMode(String value) async {
+    _studyMode = value;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setString(_keyStudyMode, value);
+  }
+
   /// Restaura los valores por defecto
   Future<void> resetToDefaults() async {
     await setFontFamily(_defaultFontFamily);
@@ -243,6 +255,7 @@ class SettingsService {
     await setOpenRouterApiKey(_defaultOpenRouterApiKey);
     await setDictionaryPriority(_defaultDictionaryPriority);
     await setContextPriority(_defaultContextPriority);
+    await setStudyMode(_defaultStudyMode);
   }
 
   /// Restaura solo la configuración de lectura (fuente, tamaño, alineación)

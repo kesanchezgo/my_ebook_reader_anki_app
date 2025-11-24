@@ -784,6 +784,52 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                            return;
                         }
 
+                        // --- MODO APRENDIZAJE (AI) ---
+                        final studyMode = SettingsService.instance.studyMode;
+                        if (studyMode == 'learning' && _readerMode == ReaderMode.reading && _pendingStudyData == null) {
+                           setState(() => _isAnalyzing = true);
+                           
+                           // Usamos la selección como palabra y contexto por ahora
+                           // Idealmente, si pudiéramos obtener la frase completa sería mejor.
+                           final result = await _dictionaryService.analyzeWordForLearning(
+                             word: _currentSelection,
+                             contextSentence: _currentSelection, 
+                             sourceLang: 'Inglés', // TODO: Detectar idioma del libro
+                             targetLang: 'Español'
+                           );
+
+                           if (!mounted) return;
+                           setState(() => _isAnalyzing = false);
+
+                           if (result != null) {
+                              final modalResult = await showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: const Color(0xFF1E1E1E),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (context) => StudyEditModal(
+                                  word: _currentSelection,
+                                  bookId: widget.book.id,
+                                  bookTitle: widget.book.title,
+                                  context: _currentSelection, // Contexto original
+                                  learningData: result, // Pasamos los datos de IA
+                                ),
+                              );
+                              
+                              if (modalResult != null && modalResult is Map && modalResult['action'] == 'manual_context') {
+                                setState(() {
+                                  _pendingStudyData = modalResult['formData'];
+                                });
+                                _setReaderMode(ReaderMode.capturingContext);
+                              }
+                              return;
+                           }
+                           // Si falla la IA, continuamos con el flujo normal (fallback)
+                        }
+                        // -----------------------------
+
                         String initialContext = '';
                         String initialWord = '';
                         String initialDefinition = '';

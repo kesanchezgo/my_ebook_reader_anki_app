@@ -15,6 +15,7 @@ class StudyEditModal extends StatefulWidget {
   final String bookId;
   final String? initialDefinition;
   final String? initialExample;
+  final Map<String, dynamic>? learningData;
 
   const StudyEditModal({
     super.key,
@@ -24,6 +25,7 @@ class StudyEditModal extends StatefulWidget {
     required this.bookId,
     this.initialDefinition,
     this.initialExample,
+    this.learningData,
   });
 
   @override
@@ -52,8 +54,24 @@ class _StudyEditModalState extends State<StudyEditModal> {
     super.initState();
     _wordController = TextEditingController(text: widget.word);
     _contextController = TextEditingController(text: widget.context);
-    _definitionController = TextEditingController(text: widget.initialDefinition ?? '');
-    _exampleController = TextEditingController(text: widget.initialExample ?? '');
+    
+    // Lógica de inicialización según modo (Learning vs Native)
+    if (widget.learningData != null) {
+      // Modo Learning: Usar datos de IA
+      final data = widget.learningData!;
+      _definitionController = TextEditingController(text: data['context_translation'] ?? '');
+      
+      String example = data['example_original'] ?? '';
+      if (data['example_translation'] != null) {
+        example += '\n(${data['example_translation']})';
+      }
+      _exampleController = TextEditingController(text: example);
+      _definitionSource = 'Gemini AI (Learning)';
+    } else {
+      // Modo Native: Usar datos pasados o buscar
+      _definitionController = TextEditingController(text: widget.initialDefinition ?? '');
+      _exampleController = TextEditingController(text: widget.initialExample ?? '');
+    }
     
     // Listeners para validación
     _wordController.addListener(_validateForm);
@@ -61,7 +79,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
     _definitionController.addListener(_validateForm);
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.initialDefinition == null || widget.initialDefinition!.isEmpty) {
+      if (widget.learningData == null && (widget.initialDefinition == null || widget.initialDefinition!.isEmpty)) {
         _searchDictionary();
       }
     });
@@ -316,6 +334,78 @@ class _StudyEditModalState extends State<StudyEditModal> {
                 maxLines: 3,
                 isLoading: _isSearching,
               ),
+              
+              // Learning Mode: Word Definitions Suggestions
+              if (widget.learningData != null && widget.learningData!['word_definitions'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (widget.learningData!['word_definitions'] as List).map<Widget>((def) {
+                      return ActionChip(
+                        label: Text(def.toString(), style: textTheme.bodySmall),
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        onPressed: () {
+                          final currentText = _definitionController.text;
+                          if (currentText.isEmpty) {
+                            _definitionController.text = def.toString();
+                          } else {
+                            _definitionController.text = '$currentText\n${def.toString()}';
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+              // Learning Mode: Irregular Forms
+              if (widget.learningData != null && 
+                  widget.learningData!['irregular_forms'] != null && 
+                  (widget.learningData!['irregular_forms'] as List).isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.tertiary.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 14, color: colorScheme.tertiary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Formas Irregulares',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.tertiary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        children: (widget.learningData!['irregular_forms'] as List).map<Widget>((form) {
+                          return Chip(
+                            label: Text(form.toString(), style: textTheme.bodySmall),
+                            backgroundColor: colorScheme.surface,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            side: BorderSide(color: colorScheme.tertiary.withOpacity(0.3)),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+
               const SizedBox(height: 16),
   
               // Example Input (Optional)

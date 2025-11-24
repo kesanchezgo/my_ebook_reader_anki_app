@@ -879,4 +879,75 @@ class DictionaryService {
      // Similar a _explainContextOpenRouter
      return null;
   }
+
+  /// Analiza una palabra para el modo de aprendizaje (Ficha de Adquisición)
+  Future<Map<String, dynamic>?> analyzeWordForLearning({
+    required String word,
+    required String contextSentence,
+    String sourceLang = 'Inglés',
+    String targetLang = 'Español',
+  }) async {
+    final apiKey = SettingsService.instance.geminiApiKey;
+    if (apiKey.isEmpty) return null;
+
+    print('🎓 Analizando palabra para aprendizaje: $word');
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
+      
+      final prompt = """
+Actúa como un profesor de idiomas experto.
+Analiza la palabra exacta '$word' que aparece en este contexto: '$contextSentence'.
+Idioma Origen: $sourceLang. Idioma Destino: $targetLang.
+
+Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
+{
+  "context_translation": "Traducción natural de la oración de contexto al $targetLang",
+  "word_definitions": [
+    "Lista de posibles traducciones de la palabra base al $targetLang.",
+    "Formato: '(tipo) significado'. Ej: '(v.) congelar', '(n.) helada'."
+  ],
+  "irregular_forms": ["forma1", "forma2"],
+  "example_original": "Una oración de ejemplo simple usando la palabra '$word' EXACTAMENTE como está escrita en la selección (mismo tiempo verbal, pluralidad o conjugación). NO uses la forma base (infinitivo) si la palabra seleccionada está conjugada.",
+  "example_translation": "Traducción de la oración de ejemplo al $targetLang"
+}
+Nota: Para "irregular_forms", si es regular, devuelve null o lista vacía. Ej: 'freeze | frozen'.
+""";
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [{
+              "text": prompt
+            }]
+          }]
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['candidates'] != null && (data['candidates'] as List).isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content != null && content['parts'] != null) {
+            final parts = content['parts'] as List;
+            if (parts.isNotEmpty) {
+              final text = parts[0]['text'] as String;
+              final cleanJson = text.replaceAll(RegExp(r'```json|```'), '').trim();
+              try {
+                return jsonDecode(cleanJson) as Map<String, dynamic>;
+              } catch (e) {
+                print('Error parsing JSON from Gemini Learning Analysis: $e');
+              }
+            }
+          }
+        }
+      } else {
+        print('Error Gemini API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error consultando Gemini para aprendizaje: $e');
+    }
+    return null;
+  }
 }
