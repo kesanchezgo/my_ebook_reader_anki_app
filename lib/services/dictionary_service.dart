@@ -501,26 +501,26 @@ class DictionaryService {
           "contents": [{
             "parts": [{
               "text": """
-Analiza el siguiente texto en español y genera una explicación didáctica en formato JSON.
-El objetivo es ayudar a un estudiante a comprender el contexto, el vocabulario y el sentido del texto.
+              Analiza el siguiente texto en español y genera una explicación didáctica en formato JSON.
+              El objetivo es ayudar a un estudiante a comprender el contexto, el vocabulario y el sentido del texto.
 
-Devuelve SOLO un objeto JSON con esta estructura exacta:
-{
-  "main_idea": "Explicación clara y concisa de la idea principal del texto (máx 2 frases).",
-  "complex_terms": [
-    {
-      "term": "Palabra o frase difícil",
-      "explanation": "Significado sencillo en este contexto."
-    }
-  ],
-  "usage_examples": [
-    "Un ejemplo de uso similar o una frase reescrita de forma más sencilla."
-  ],
-  "cultural_note": "Opcional: Si hay alguna referencia cultural, idiomática o tono específico (irónico, formal, etc.), menciónalo aquí. Si no, null."
-}
+              Devuelve SOLO un objeto JSON con esta estructura exacta:
+              {
+                "main_idea": "Explicación clara y concisa de la idea principal del texto (máx 2 frases).",
+                "complex_terms": [
+                  {
+                    "term": "Palabra o frase difícil",
+                    "explanation": "Significado sencillo en este contexto."
+                  }
+                ],
+                "usage_examples": [
+                  "Un ejemplo de uso similar o una frase reescrita de forma más sencilla."
+                ],
+                "cultural_note": "Opcional: Si hay alguna referencia cultural, idiomática o tono específico (irónico, formal, etc.), menciónalo aquí. Si no, null."
+              }
 
-Texto a analizar: "$context"
-"""
+              Texto a analizar: "$context"
+              """
             }]
           }]
         }),
@@ -816,28 +816,28 @@ Texto a analizar: "$context"
           "contents": [{
             "parts": [{
               "text": """
-Genera una lista de 3 sinónimos para la palabra "$word" en el contexto de un libro.
-Ordénalos por formalidad y explica brevemente la diferencia de uso o matiz de cada uno.
+              Genera una lista de 3 sinónimos para la palabra "$word" en el contexto de un libro.
+              Ordénalos por formalidad y explica brevemente la diferencia de uso o matiz de cada uno.
 
-Devuelve SOLO un objeto JSON con esta estructura exacta:
-{
-  "word": "$word",
-  "synonyms": [
-    {
-      "term": "Sinónimo 1",
-      "nuance": "Explicación breve de cuándo usarlo o su matiz específico."
-    },
-    {
-      "term": "Sinónimo 2",
-      "nuance": "Explicación..."
-    },
-    {
-      "term": "Sinónimo 3",
-      "nuance": "Explicación..."
-    }
-  ]
-}
-"""
+              Devuelve SOLO un objeto JSON con esta estructura exacta:
+              {
+                "word": "$word",
+                "synonyms": [
+                  {
+                    "term": "Sinónimo 1",
+                    "nuance": "Explicación breve de cuándo usarlo o su matiz específico."
+                  },
+                  {
+                    "term": "Sinónimo 2",
+                    "nuance": "Explicación..."
+                  },
+                  {
+                    "term": "Sinónimo 3",
+                    "nuance": "Explicación..."
+                  }
+                ]
+              }
+              """
             }]
           }]
         }),
