@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_ebook_reader_anki_app/l10n/app_localizations.dart';
 import '../models/book.dart';
+import '../models/study_card.dart';
 import '../services/epub_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/settings_service.dart';
@@ -789,6 +790,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         if (studyMode == 'learning' && _readerMode == ReaderMode.reading && _pendingStudyData == null) {
                            setState(() => _isAnalyzing = true);
                            
+
                            // Usamos la selección como palabra y contexto por ahora
                            // Idealmente, si pudiéramos obtener la frase completa sería mejor.
                            final result = await _dictionaryService.analyzeWordForLearning(
@@ -815,6 +817,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                   bookTitle: widget.book.title,
                                   context: _currentSelection, // Contexto original
                                   learningData: result, // Pasamos los datos de IA
+                                  mode: StudyCardType.acquisition,
                                 ),
                               );
                               

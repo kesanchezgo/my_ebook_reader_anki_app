@@ -16,6 +16,7 @@ class StudyEditModal extends StatefulWidget {
   final String? initialDefinition;
   final String? initialExample;
   final Map<String, dynamic>? learningData;
+  final StudyCardType mode;
 
   const StudyEditModal({
     super.key,
@@ -26,6 +27,7 @@ class StudyEditModal extends StatefulWidget {
     this.initialDefinition,
     this.initialExample,
     this.learningData,
+    this.mode = StudyCardType.enrichment,
   });
 
   @override
@@ -55,8 +57,8 @@ class _StudyEditModalState extends State<StudyEditModal> {
     _wordController = TextEditingController(text: widget.word);
     _contextController = TextEditingController(text: widget.context);
     
-    // Lógica de inicialización según modo (Learning vs Native)
-    if (widget.learningData != null) {
+    // Lógica de inicialización según modo
+    if (widget.mode == StudyCardType.acquisition && widget.learningData != null) {
       // Modo Learning: Usar datos de IA
       final data = widget.learningData!;
       _definitionController = TextEditingController(text: data['context_translation'] ?? '');
@@ -79,7 +81,8 @@ class _StudyEditModalState extends State<StudyEditModal> {
     _definitionController.addListener(_validateForm);
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.learningData == null && (widget.initialDefinition == null || widget.initialDefinition!.isEmpty)) {
+      if (widget.mode == StudyCardType.enrichment && 
+          (widget.initialDefinition == null || widget.initialDefinition!.isEmpty)) {
         _searchDictionary();
       }
     });
@@ -173,16 +176,27 @@ class _StudyEditModalState extends State<StudyEditModal> {
       final cardId = const Uuid().v4();
       final audioPath = await _ttsService.generateWordAudio(_wordController.text, cardId);
 
+      final Map<String, dynamic> content = {
+        'word': _wordController.text,
+        'definition': _definitionController.text,
+        'context': _contextController.text,
+        'example': _exampleController.text,
+      };
+
+      // Añadir campos específicos según modo
+      if (widget.mode == StudyCardType.acquisition) {
+        content['sourceLang'] = 'en'; // TODO: Detectar dinámicamente
+        content['targetLang'] = 'es';
+      } else {
+        content['sourceLang'] = 'es';
+        content['targetLang'] = 'es';
+      }
+
       final newCard = StudyCard(
         id: cardId,
         bookId: widget.bookId,
-        type: StudyCardType.enrichment, // Por defecto enrichment (definición)
-        content: {
-          'word': _wordController.text,
-          'definition': _definitionController.text,
-          'context': _contextController.text,
-          'example': _exampleController.text,
-        },
+        type: widget.mode,
+        content: content,
         audioPath: audioPath,
         fuente: widget.bookTitle,
         createdAt: DateTime.now(),
@@ -257,10 +271,18 @@ class _StudyEditModalState extends State<StudyEditModal> {
               // Header
               Row(
                 children: [
-                  Icon(Icons.bookmark_add_rounded, color: colorScheme.primary, size: 28),
+                  Icon(
+                    widget.mode == StudyCardType.acquisition 
+                        ? Icons.language_rounded 
+                        : Icons.bookmark_add_rounded, 
+                    color: colorScheme.primary, 
+                    size: 28
+                  ),
                   const SizedBox(width: 12),
                   Text(
-                    l10n.createStudyCard,
+                    widget.mode == StudyCardType.acquisition 
+                        ? l10n.createStudyCard // "Ficha de Adquisición" si tuvieras la key, por ahora reuso
+                        : l10n.createStudyCard,
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -325,18 +347,20 @@ class _StudyEditModalState extends State<StudyEditModal> {
                   ),
                 ),
   
-              // Definition Input
+              // Definition Input (Or Translation in Learning Mode)
               _buildModernTextField(
                 controller: _definitionController,
-                label: l10n.definition,
-                icon: Icons.menu_book_rounded,
+                label: widget.mode == StudyCardType.acquisition ? 'Traducción' : l10n.definition,
+                icon: widget.mode == StudyCardType.acquisition ? Icons.g_translate_rounded : Icons.menu_book_rounded,
                 theme: theme,
                 maxLines: 3,
                 isLoading: _isSearching,
               ),
               
               // Learning Mode: Word Definitions Suggestions
-              if (widget.learningData != null && widget.learningData!['word_definitions'] != null)
+              if (widget.mode == StudyCardType.acquisition && 
+                  widget.learningData != null && 
+                  widget.learningData!['word_definitions'] != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Wrap(
@@ -362,7 +386,8 @@ class _StudyEditModalState extends State<StudyEditModal> {
                 ),
 
               // Learning Mode: Irregular Forms
-              if (widget.learningData != null && 
+              if (widget.mode == StudyCardType.acquisition &&
+                  widget.learningData != null && 
                   widget.learningData!['irregular_forms'] != null && 
                   (widget.learningData!['irregular_forms'] as List).isNotEmpty)
                 Container(
@@ -420,28 +445,60 @@ class _StudyEditModalState extends State<StudyEditModal> {
               const SizedBox(height: 16),
   
               // Context Input
-              _buildModernTextField(
-                controller: _contextController,
-                label: '${l10n.context} (Opcional)',
-                icon: Icons.format_quote_rounded,
-                theme: theme,
-                maxLines: 2,
-                isRequired: false,
-              ),
-              
-              // Manual Context Button
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _requestManualContext,
-                  icon: const Icon(Icons.touch_app_rounded, size: 18),
-                  label: Text(l10n.selectFromBook),
-                  style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              if (widget.mode == StudyCardType.enrichment) ...[
+                _buildModernTextField(
+                  controller: _contextController,
+                  label: '${l10n.context} (Opcional)',
+                  icon: Icons.format_quote_rounded,
+                  theme: theme,
+                  maxLines: 2,
+                  isRequired: false,
+                ),
+                
+                // Manual Context Button
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _requestManualContext,
+                    icon: const Icon(Icons.touch_app_rounded, size: 18),
+                    label: Text(l10n.selectFromBook),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
                   ),
                 ),
-              ),
+              ] else ...[
+                // Learning Mode: Read-only Context Display
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Oración Original',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _contextController.text,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               
               const SizedBox(height: 24),
               

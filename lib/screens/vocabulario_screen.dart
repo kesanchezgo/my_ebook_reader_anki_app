@@ -26,6 +26,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   List<StudyCard> _cards = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  int _selectedTabIndex = 0; // 0: Vocabulario (Enrichment), 1: Idiomas (Acquisition)
   StreamSubscription? _dbSubscription;
   
   @override
@@ -58,10 +59,20 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
   }
   
   List<StudyCard> get _filteredCards {
-    if (_searchQuery.isEmpty) return _cards;
+    // 1. Filtrar por tipo (Tab)
+    final typeFiltered = _cards.where((card) {
+      if (_selectedTabIndex == 0) {
+        return card.type == StudyCardType.enrichment;
+      } else {
+        return card.type == StudyCardType.acquisition;
+      }
+    }).toList();
+
+    // 2. Filtrar por búsqueda
+    if (_searchQuery.isEmpty) return typeFiltered;
     
     final query = _searchQuery.toLowerCase();
-    return _cards.where((card) {
+    return typeFiltered.where((card) {
       return card.word.toLowerCase().contains(query) ||
              card.definition.toLowerCase().contains(query) ||
              card.context.toLowerCase().contains(query);
@@ -559,6 +570,47 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
     );
   }
   
+  Widget _buildTabButton(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon, 
+              size: 18, 
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -596,6 +648,37 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
       ),
       body: Column(
         children: [
+          // Tabs de Filtrado
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTabButton(
+                    context, 
+                    label: l10n.myVocabulary, // Usamos myVocabulary que ya existe
+                    icon: Icons.book_rounded,
+                    isSelected: _selectedTabIndex == 0,
+                    onTap: () => setState(() => _selectedTabIndex = 0),
+                  ),
+                ),
+                Expanded(
+                  child: _buildTabButton(
+                    context, 
+                    label: 'Idiomas', // TODO: Add l10n key
+                    icon: Icons.language_rounded,
+                    isSelected: _selectedTabIndex == 1,
+                    onTap: () => setState(() => _selectedTabIndex = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Barra de búsqueda
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -666,14 +749,14 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.speaker_notes_off_rounded,
+                              _selectedTabIndex == 0 ? Icons.speaker_notes_off_rounded : Icons.language_rounded,
                               size: 80,
                               color: colorScheme.outlineVariant,
                             ),
                             const SizedBox(height: 24),
                             Text(
                               _searchQuery.isEmpty
-                                  ? l10n.noCardsSaved
+                                  ? (_selectedTabIndex == 0 ? l10n.noCardsSaved : 'No hay fichas de idiomas')
                                   : l10n.noResultsFound,
                               style: TextStyle(
                                 fontSize: 18,
@@ -686,7 +769,9 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
-                                  l10n.vocabularyEmptyState,
+                                  _selectedTabIndex == 0 
+                                      ? l10n.vocabularyEmptyState
+                                      : 'Activa el modo "Aprender" en ajustes y selecciona palabras para crear fichas de adquisición.',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: colorScheme.onSurfaceVariant.withOpacity(0.8),
@@ -710,6 +795,7 @@ class _VocabularioScreenState extends State<VocabularioScreen> {
                             onPlayWord: () => _playAudio(card.word, isWord: true),
                             onPlaySentence: () => _playAudio(card.context, isWord: false),
                             onExplainContext: () => _explainContext(card.context),
+                            isAcquisition: card.type == StudyCardType.acquisition,
                           );
                         },
                       ),
@@ -771,6 +857,7 @@ class _CardTile extends StatelessWidget {
   final VoidCallback onPlayWord;
   final VoidCallback onPlaySentence;
   final VoidCallback onExplainContext;
+  final bool isAcquisition;
   
   const _CardTile({
     required this.card,
@@ -778,6 +865,7 @@ class _CardTile extends StatelessWidget {
     required this.onPlayWord,
     required this.onPlaySentence,
     required this.onExplainContext,
+    this.isAcquisition = false,
   });
   
   @override
@@ -799,7 +887,10 @@ class _CardTile extends StatelessWidget {
           ),
         ],
         border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.2),
+          color: isAcquisition 
+              ? colorScheme.tertiary.withOpacity(0.3) 
+              : colorScheme.outlineVariant.withOpacity(0.2),
+          width: isAcquisition ? 1.5 : 1,
         ),
       ),
       child: Theme(
@@ -811,18 +902,20 @@ class _CardTile extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
+              color: isAcquisition ? colorScheme.tertiaryContainer : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
-              child: Text(
-                card.word.isNotEmpty ? card.word[0].toUpperCase() : '?',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
+              child: isAcquisition
+                  ? Icon(Icons.language, color: colorScheme.onTertiaryContainer)
+                  : Text(
+                      card.word.isNotEmpty ? card.word[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
             ),
           ),
           title: Text(
@@ -845,6 +938,11 @@ class _CardTile extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isAcquisition)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                ),
               IconButton(
                 icon: Icon(Icons.volume_up_rounded, size: 22, color: colorScheme.primary),
                 tooltip: l10n.playWord,
@@ -861,8 +959,8 @@ class _CardTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Definición completa
-                _buildSectionTitle(context, l10n.definition),
+                // Definición completa (o Traducción)
+                _buildSectionTitle(context, isAcquisition ? 'Traducción' : l10n.definition),
                 const SizedBox(height: 6),
                 Text(
                   card.definition,
@@ -905,8 +1003,9 @@ class _CardTile extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          _buildSectionTitle(context, l10n.context),
+                          _buildSectionTitle(context, isAcquisition ? 'Oración Original' : l10n.context),
                           const SizedBox(width: 8),
+                          if (!isAcquisition) // Solo mostrar botón de IA en modo nativo si se desea
                           IconButton(
                             onPressed: onExplainContext,
                             icon: const Icon(Icons.auto_awesome_rounded, size: 18),
