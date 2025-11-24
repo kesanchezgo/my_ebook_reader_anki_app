@@ -985,7 +985,7 @@ abstract class AppLocalizations {
   /// No description provided for @readerToolSynonyms.
   ///
   /// In es, this message translates to:
-  /// **'Ver Sinónimos'**
+  /// **'Explorar Matices'**
   String get readerToolSynonyms;
 
   /// No description provided for @promptSelectWord.
@@ -1039,7 +1039,7 @@ abstract class AppLocalizations {
   /// No description provided for @actionSynonyms.
   ///
   /// In es, this message translates to:
-  /// **'Buscar Sinónimos'**
+  /// **'Explorar Matices'**
   String get actionSynonyms;
 
   /// No description provided for @analyzingContext.

@@ -770,7 +770,7 @@ class DictionaryService {
   }
 
   /// Obtiene sinónimos y matices de una palabra usando IA
-  Future<Map<String, dynamic>?> getSynonyms(String word) async {
+  Future<Map<String, dynamic>?> getSynonyms(String word, {String? contextSentence}) async {
     final priorities = SettingsService.instance.contextPriority; // Reusamos prioridad de contexto/explicación
 
     for (final source in priorities) {
@@ -778,7 +778,7 @@ class DictionaryService {
       
       switch (source) {
         case 'gemini':
-          result = await _getSynonymsGemini(word);
+          result = await _getSynonymsGemini(word, contextSentence);
           break;
         case 'perplexity':
           result = await _getSynonymsPerplexity(word);
@@ -802,42 +802,57 @@ class DictionaryService {
     return null;
   }
 
-  Future<Map<String, dynamic>?> _getSynonymsGemini(String word) async {
+  Future<Map<String, dynamic>?> _getSynonymsGemini(String word, String? contextSentence) async {
     final apiKey = SettingsService.instance.geminiApiKey;
     if (apiKey.isEmpty) return null;
 
     try {
       final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
       
+      // CAMBIOS CLAVE EN EL PROMPT:
+      final prompt = """
+      Actúa como un Editor Literario meticuloso y directo.
+      Analiza la palabra "$word" ${contextSentence != null ? 'en esta oración específica: "$contextSentence"' : 'en el contexto de un libro'}.
+
+      Tu tarea es sugerir 3 sinónimos que cambien sutilmente el tono o la intención.
+
+      REGLAS CRÍTICAS PARA EL "NUANCE" (MATIZ):
+      1. PROHIBIDO DEFINIR la palabra. No digas "Significa que...".
+      2. SÉ COMPARATIVO: Di explícitamente por qué es diferente a "$word". (Ej: "Más formal", "Más agresivo", "Implica voluntariedad").
+      3. SÉ CONCISO: Máximo 25 palabras por matiz. Ve al grano.
+      4. Si el sinónimo cambia la intensidad, indícalo.
+
+      Devuelve SOLO un objeto JSON:
+      {
+        "word": "$word",
+        "synonyms": [
+          {
+            "term": "Sinónimo 1",
+            "nuance": "Comparación directa y breve. Ej: 'Sugiere una acción más lenta y deliberada que la original.'"
+          },
+          {
+            "term": "Sinónimo 2",
+            "nuance": "Comparación directa..."
+          },
+          {
+            "term": "Sinónimo 3",
+            "nuance": "Comparación directa..."
+          }
+        ]
+      }
+      """;
+
+      print('--- PROMPT ENVIADO A GEMINI (SINÓNIMOS/MATICES) ---');
+      print(prompt);
+      print('---------------------------------------------------');
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "contents": [{
             "parts": [{
-              "text": """
-              Genera una lista de 3 sinónimos para la palabra "$word" en el contexto de un libro.
-              Ordénalos por formalidad y explica brevemente la diferencia de uso o matiz de cada uno.
-
-              Devuelve SOLO un objeto JSON con esta estructura exacta:
-              {
-                "word": "$word",
-                "synonyms": [
-                  {
-                    "term": "Sinónimo 1",
-                    "nuance": "Explicación breve de cuándo usarlo o su matiz específico."
-                  },
-                  {
-                    "term": "Sinónimo 2",
-                    "nuance": "Explicación..."
-                  },
-                  {
-                    "term": "Sinónimo 3",
-                    "nuance": "Explicación..."
-                  }
-                ]
-              }
-              """
+              "text": prompt
             }]
           }]
         }),

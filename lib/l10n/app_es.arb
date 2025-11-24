@@ -244,7 +244,7 @@
   "langPortuguese": "🇧🇷 Portugués",
   "readerToolCapture": "Crear Tarjeta",
   "readerToolAnalyze": "Analizar Texto",
-  "readerToolSynonyms": "Ver Sinónimos",
+  "readerToolSynonyms": "Explorar Matices",
   "promptSelectWord": "Elige la palabra a estudiar",
   "promptSelectContext": "Selecciona la oración para: {word}",
   "@promptSelectContext": {
@@ -267,7 +267,7 @@
   "actionConfirmWord": "Confirmar Palabra",
   "actionConfirmContext": "Confirmar Oración",
   "actionAnalyze": "Analizar",
-  "actionSynonyms": "Buscar Sinónimos",
+  "actionSynonyms": "Explorar Matices",
   "analyzingContext": "Analizando contexto con IA...",
   "creatingCardFor": "Creando tarjeta para: {word}",
   "@creatingCardFor": {

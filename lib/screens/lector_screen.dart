@@ -884,9 +884,23 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                         }
                         
                         if (_readerMode == ReaderMode.findingSynonyms) {
+                           if (_capturedWordForAI == null) {
+                               setState(() {
+                                 _capturedWordForAI = _currentSelection;
+                               });
+                               PremiumToast.show(context, "Palabra seleccionada. Ahora selecciona la oración de contexto.");
+                               return;
+                           }
+
                            setState(() => _isAnalyzing = true);
-                           final result = await _dictionaryService.getSynonyms(_currentSelection);
+                           final word = _capturedWordForAI!;
+                           final contextSentence = _currentSelection;
+
+                           final result = await _dictionaryService.getSynonyms(word, contextSentence: contextSentence);
                            
+                           if (mounted) {
+                             setState(() => _capturedWordForAI = null);
+                           }
 
                            // Check if cancelled
                            if (!mounted || _readerMode == ReaderMode.reading) {
@@ -909,7 +923,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                  type: AiResultType.synonyms,
                                  data: result,
                                  source: result['source'] ?? 'IA',
-                                 originalText: _currentSelection,
+                                 originalText: word,
                                ),
                              );
                              if (mounted) setState(() => _showControls = true);
@@ -1289,6 +1303,9 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
       case ReaderMode.analyzing:
         return l10n.promptSelectText;
       case ReaderMode.findingSynonyms:
+        if (_capturedWordForAI != null) {
+          return l10n.promptSelectContext(_capturedWordForAI!);
+        }
         return l10n.promptSelectWord;
       default:
         return '';

@@ -491,7 +491,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get readerToolAnalyze => 'Analizar Texto';
 
   @override
-  String get readerToolSynonyms => 'Ver Sinónimos';
+  String get readerToolSynonyms => 'Explorar Matices';
 
   @override
   String get promptSelectWord => 'Elige la palabra a estudiar';
@@ -522,7 +522,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get actionAnalyze => 'Analizar';
 
   @override
-  String get actionSynonyms => 'Buscar Sinónimos';
+  String get actionSynonyms => 'Explorar Matices';
 
   @override
   String get analyzingContext => 'Analizando contexto con IA...';
