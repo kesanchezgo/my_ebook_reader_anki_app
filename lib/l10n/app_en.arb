@@ -105,11 +105,11 @@
   "alignment": "Alignment",
   "justified": "Justified",
   "left": "Left",
-  "confirmContext": "Confirm Context",
+  "confirmContext": "Confirm Sentence",
   "saveCard": "Save Card",
   "loadingChapter": "Loading chapter...",
   "selectingContext": "Selecting context",
-  "selectContextInstruction": "Select text and tap \"Confirm Context\"",
+  "selectContextInstruction": "Select text and tap \"Confirm Sentence\"",
   "footnoteDevelopment": "Footnote: Navigation in development",
   "noCardsToExport": "No cards to export",
   "exportingCards": "Exporting cards...",
@@ -151,7 +151,8 @@
     }
   },
   "close": "Close",
-  "originalContext": "ORIGINAL CONTEXT",
+  "originalContext": "Book Sentence",
+  "contextTranslation": "Sentence Translation",
   "mainIdea": "Main Idea",
   "keyVocabulary": "KEY VOCABULARY",
   "usageExamples": "Usage Examples",
@@ -193,7 +194,7 @@
       }
     }
   },
-  "createStudyCard": "Create Study Card",
+  "createStudyCard": "New Card",
   "wordAlreadyExists": "This word is already in your collection.",
   "word": "Word",
   "exampleOptional": "Example (Optional)",
@@ -244,7 +245,7 @@
   "readerToolCapture": "Create Card",
   "readerToolAnalyze": "Analyze Text",
   "readerToolSynonyms": "See Synonyms",
-  "promptSelectWord": "Select the word to learn",
+  "promptSelectWord": "Choose the word to study",
   "promptSelectContext": "Select sentence for: {word}",
   "@promptSelectContext": {
     "placeholders": {
@@ -253,9 +254,18 @@
       }
     }
   },
+  "promptSelectContextVocab": "Select context for: {word}",
+  "@promptSelectContextVocab": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "actionConfirmContextVocab": "Confirm Context",
   "promptSelectText": "Select text to analyze",
   "actionConfirmWord": "Confirm Word",
-  "actionConfirmContext": "Confirm Context",
+  "actionConfirmContext": "Confirm Sentence",
   "actionAnalyze": "Analyze",
   "actionSynonyms": "Find Synonyms",
   "analyzingContext": "Analyzing context with AI...",

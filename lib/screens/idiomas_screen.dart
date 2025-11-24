@@ -257,7 +257,7 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
   }
 }
 
-class _CardTile extends StatelessWidget {
+class _CardTile extends StatefulWidget {
   final StudyCard card;
   final VoidCallback onDelete;
   final VoidCallback onPlayWord;
@@ -269,7 +269,15 @@ class _CardTile extends StatelessWidget {
     required this.onPlayWord,
     required this.onPlaySentence,
   });
-  
+
+  @override
+  State<_CardTile> createState() => _CardTileState();
+}
+
+class _CardTileState extends State<_CardTile> {
+  bool _showExampleTranslation = false;
+  bool _showContextTranslation = false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -277,8 +285,13 @@ class _CardTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     // Extraer datos adicionales del content
-    final irregularForms = card.content['irregular_forms'] as List?;
-    final wordDefinitions = card.content['word_definitions'] as List?;
+    final irregularForms = widget.card.content['irregular_forms'] as List?;
+    final wordDefinitions = widget.card.content['word_definitions'] as List?;
+    final exampleTranslation = widget.card.content['example_translation'] as String?;
+    final contextTranslation = widget.card.content['context_translation'] as String?;
+
+    // Filtrar otras acepciones (excluir la principal)
+    final otherDefinitions = wordDefinitions?.where((d) => d != widget.card.definition).toList() ?? [];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -311,7 +324,7 @@ class _CardTile extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                card.word.isNotEmpty ? card.word[0].toUpperCase() : '?',
+                widget.card.word.isNotEmpty ? widget.card.word[0].toUpperCase() : '?',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
@@ -321,7 +334,7 @@ class _CardTile extends StatelessWidget {
             ),
           ),
           title: Text(
-            card.word,
+            widget.card.word,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
@@ -331,7 +344,7 @@ class _CardTile extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              card.definition,
+              widget.card.definition,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
@@ -343,7 +356,7 @@ class _CardTile extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.volume_up_rounded, size: 22, color: colorScheme.primary),
                 tooltip: l10n.playWord,
-                onPressed: onPlayWord,
+                onPressed: widget.onPlayWord,
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                   padding: const EdgeInsets.all(8),
@@ -360,7 +373,7 @@ class _CardTile extends StatelessWidget {
                 _buildSectionTitle(context, 'Traducción'),
                 const SizedBox(height: 6),
                 Text(
-                  card.definition,
+                  widget.card.definition,
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.4,
@@ -369,14 +382,14 @@ class _CardTile extends StatelessWidget {
                 ),
                 
                 // Definiciones adicionales (Word Definitions)
-                if (wordDefinitions != null && wordDefinitions.isNotEmpty) ...[
+                if (otherDefinitions.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _buildSectionTitle(context, 'Otras Acepciones'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: wordDefinitions.map<Widget>((def) {
+                    children: otherDefinitions.map<Widget>((def) {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -424,7 +437,7 @@ class _CardTile extends StatelessWidget {
                   ),
                 ],
 
-                if (card.example.isNotEmpty) ...[
+                if (widget.card.example.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildSectionTitle(context, l10n.example),
                   const SizedBox(height: 6),
@@ -437,7 +450,7 @@ class _CardTile extends StatelessWidget {
                       border: Border.all(color: colorScheme.tertiary.withValues(alpha: 0.2)),
                     ),
                     child: Text(
-                      card.example,
+                      widget.card.example,
                       style: TextStyle(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -445,18 +458,27 @@ class _CardTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (exampleTranslation != null && exampleTranslation.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildTranslationToggle(
+                      context, 
+                      isVisible: _showExampleTranslation,
+                      onToggle: () => setState(() => _showExampleTranslation = !_showExampleTranslation),
+                      text: exampleTranslation,
+                    ),
+                  ],
                 ],
                 
-                if (card.context.isNotEmpty) ...[
+                if (widget.card.context.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   
                   // Contexto/Oración
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionTitle(context, 'Oración Original'),
+                      _buildSectionTitle(context, l10n.originalContext),
                       IconButton(
-                        onPressed: onPlaySentence,
+                        onPressed: widget.onPlaySentence,
                         icon: const Icon(Icons.play_arrow_rounded, size: 20),
                         tooltip: l10n.listenContext,
                         style: IconButton.styleFrom(
@@ -476,7 +498,7 @@ class _CardTile extends StatelessWidget {
                       border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      card.context,
+                      widget.card.context,
                       style: TextStyle(
                         fontStyle: FontStyle.italic,
                         color: colorScheme.onSurfaceVariant,
@@ -484,6 +506,15 @@ class _CardTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (contextTranslation != null && contextTranslation.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildTranslationToggle(
+                      context, 
+                      isVisible: _showContextTranslation,
+                      onToggle: () => setState(() => _showContextTranslation = !_showContextTranslation),
+                      text: contextTranslation,
+                    ),
+                  ],
                 ],
                 
                 const SizedBox(height: 20),
@@ -501,7 +532,7 @@ class _CardTile extends StatelessWidget {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  card.fuente,
+                                  widget.card.fuente,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
@@ -518,7 +549,7 @@ class _CardTile extends StatelessWidget {
                               Icon(Icons.calendar_today_rounded, size: 14, color: colorScheme.primary.withValues(alpha: 0.7)),
                               const SizedBox(width: 6),
                               Text(
-                                _formatDate(context, card.createdAt),
+                                _formatDate(context, widget.card.createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: colorScheme.onSurfaceVariant,
@@ -531,7 +562,7 @@ class _CardTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 16),
                     IconButton(
-                      onPressed: onDelete,
+                      onPressed: widget.onDelete,
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       tooltip: l10n.deleteCard,
                       style: IconButton.styleFrom(
@@ -547,6 +578,70 @@ class _CardTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+  
+  Widget _buildTranslationToggle(BuildContext context, {
+    required bool isVisible,
+    required VoidCallback onToggle,
+    required String text,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.translate_rounded, 
+                  size: 14, 
+                  color: colorScheme.primary
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Traducción',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  isVisible ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isVisible)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colorScheme.primary.withValues(alpha: 0.1)),
+            ),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+          ),
+      ],
     );
   }
   

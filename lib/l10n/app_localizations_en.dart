@@ -211,7 +211,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get left => 'Left';
 
   @override
-  String get confirmContext => 'Confirm Context';
+  String get confirmContext => 'Confirm Sentence';
 
   @override
   String get saveCard => 'SAVE CARD';
@@ -224,7 +224,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectContextInstruction =>
-      'Select text and tap \"Confirm Context\"';
+      'Select text and tap \"Confirm Sentence\"';
 
   @override
   String get footnoteDevelopment => 'Footnote: Navigation in development';
@@ -275,7 +275,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get close => 'Close';
 
   @override
-  String get originalContext => 'ORIGINAL CONTEXT';
+  String get originalContext => 'Book Sentence';
+
+  @override
+  String get contextTranslation => 'Sentence Translation';
 
   @override
   String get mainIdea => 'Main Idea';
@@ -361,7 +364,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get createStudyCard => 'Create Study Card';
+  String get createStudyCard => 'New Card';
 
   @override
   String get wordAlreadyExists => 'This word is already in your collection.';
@@ -490,12 +493,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readerToolSynonyms => 'See Synonyms';
 
   @override
-  String get promptSelectWord => 'Select the word to learn';
+  String get promptSelectWord => 'Choose the word to study';
 
   @override
   String promptSelectContext(String word) {
     return 'Select sentence for: $word';
   }
+
+  @override
+  String promptSelectContextVocab(String word) {
+    return 'Select context for: $word';
+  }
+
+  @override
+  String get actionConfirmContextVocab => 'Confirm Context';
 
   @override
   String get promptSelectText => 'Select text to analyze';
@@ -504,7 +515,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionConfirmWord => 'Confirm Word';
 
   @override
-  String get actionConfirmContext => 'Confirm Context';
+  String get actionConfirmContext => 'Confirm Sentence';
 
   @override
   String get actionAnalyze => 'Analyze';

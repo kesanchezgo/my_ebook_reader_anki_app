@@ -809,6 +809,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                       readerMode: _readerMode,
                       onUserInteraction: _onUserInteraction,
                       selectionClearToken: _selectionClearToken,
+                      studyMode: _book.studyMode,
                       onSelectionChanged: (selection) {
                         setState(() => _currentSelection = selection);
                       },
@@ -942,13 +943,24 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                            final word = _capturedWordForAI!;
                            final contextSentence = _currentSelection;
                            
-                           final result = await _dictionaryService.analyzeWordForLearning(
-                             word: word,
-                             contextSentence: contextSentence, 
-                             sourceLang: _book.language ?? 'Inglés', 
-                             targetLang: _book.targetLanguage ?? 'Español',
-                             bookInfo: widget.book.title,
-                           );
+                           Map<String, dynamic>? result;
+                           try {
+                             result = await _dictionaryService.analyzeWordForLearning(
+                               word: word,
+                               contextSentence: contextSentence, 
+                               sourceLang: _book.language ?? 'Inglés', 
+                               targetLang: _book.targetLanguage ?? 'Español',
+                               bookInfo: widget.book.title,
+                             );
+                           } catch (e) {
+                             if (mounted) {
+                               String message = e.toString();
+                               if (message.contains("Exception: ")) {
+                                 message = message.replaceAll("Exception: ", "");
+                               }
+                               PremiumToast.show(context, message, isError: true);
+                             }
+                           }
 
                            if (!mounted) return;
                            setState(() {
@@ -1263,7 +1275,17 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
         return l10n.promptSelectWord;
       case ReaderMode.capturingContext:
         final word = _capturedWordForAI ?? _pendingStudyData?['word'] ?? '...';
-        return l10n.promptSelectContext(word);
+        
+        // Determinar modo de estudio
+        final bookMode = _book.studyMode;
+        final globalMode = SettingsService.instance.studyMode;
+        final isLearningMode = bookMode == 'learn_language' || (bookMode == null && globalMode == 'learning');
+
+        if (isLearningMode) {
+          return l10n.promptSelectContext(word); // "Selecciona la oración para: [palabra]"
+        } else {
+          return l10n.promptSelectContextVocab(word); // "Selecciona el contexto para: [palabra]"
+        }
       case ReaderMode.analyzing:
         return l10n.promptSelectText;
       case ReaderMode.findingSynonyms:
@@ -1345,6 +1367,7 @@ class _ChapterView extends StatefulWidget {
   final VoidCallback onUserInteraction;
   final bool isSelectingContext;
   final int selectionClearToken;
+  final String? studyMode;
 
   const _ChapterView({
     super.key,
@@ -1362,6 +1385,7 @@ class _ChapterView extends StatefulWidget {
     required this.onUserInteraction,
     this.isSelectingContext = false,
     this.selectionClearToken = 0,
+    this.studyMode,
   });
 
   @override
@@ -1462,7 +1486,16 @@ class _ChapterViewState extends State<_ChapterView> {
       case ReaderMode.capturingWord:
         return l10n.actionConfirmWord;
       case ReaderMode.capturingContext:
-        return l10n.actionConfirmContext;
+        // Determinar modo de estudio
+        final bookMode = widget.studyMode;
+        final globalMode = SettingsService.instance.studyMode;
+        final isLearningMode = bookMode == 'learn_language' || (bookMode == null && globalMode == 'learning');
+
+        if (isLearningMode) {
+          return l10n.actionConfirmContext; // "Confirmar oración"
+        } else {
+          return l10n.actionConfirmContextVocab; // "Confirmar contexto"
+        }
       case ReaderMode.analyzing:
         return l10n.actionAnalyze;
       case ReaderMode.findingSynonyms:

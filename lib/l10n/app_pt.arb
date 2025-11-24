@@ -105,11 +105,11 @@
   "alignment": "Alinhamento",
   "justified": "Justificado",
   "left": "Esquerda",
-  "confirmContext": "Confirmar Contexto",
+  "confirmContext": "Confirmar Frase",
   "saveCard": "Salvar Cartão",
   "loadingChapter": "Carregando capítulo...",
   "selectingContext": "Selecionando contexto",
-  "selectContextInstruction": "Selecione o texto e toque em \"Confirmar Contexto\"",
+  "selectContextInstruction": "Selecione o texto e toque em \"Confirmar Frase\"",
   "footnoteDevelopment": "Nota de rodapé: Navegação em desenvolvimento",
   "noCardsToExport": "Não há cartões para exportar",
   "exportingCards": "Exportando cartões...",
@@ -151,7 +151,8 @@
     }
   },
   "close": "Fechar",
-  "originalContext": "CONTEXTO ORIGINAL",
+  "originalContext": "Frase do Livro",
+  "contextTranslation": "Tradução da Frase",
   "mainIdea": "Ideia Principal",
   "keyVocabulary": "VOCABULÁRIO CHAVE",
   "usageExamples": "Exemplos de Uso",
@@ -193,7 +194,7 @@
       }
     }
   },
-  "createStudyCard": "Criar Cartão de Estudo",
+  "createStudyCard": "Novo Cartão",
   "wordAlreadyExists": "Esta palavra já está na sua coleção.",
   "word": "Palavra",
   "exampleOptional": "Exemplo (Opcional)",
@@ -244,7 +245,7 @@
   "readerToolCapture": "Criar Cartão",
   "readerToolAnalyze": "Analisar Texto",
   "readerToolSynonyms": "Ver Sinônimos",
-  "promptSelectWord": "Selecione a palavra para aprender",
+  "promptSelectWord": "Escolha a palavra para estudar",
   "promptSelectContext": "Selecione a frase para: {word}",
   "@promptSelectContext": {
     "placeholders": {
@@ -253,9 +254,18 @@
       }
     }
   },
+  "promptSelectContextVocab": "Selecione o contexto para: {word}",
+  "@promptSelectContextVocab": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "actionConfirmContextVocab": "Confirmar Contexto",
   "promptSelectText": "Selecione o texto para analisar",
   "actionConfirmWord": "Confirmar Palavra",
-  "actionConfirmContext": "Confirmar Contexto",
+  "actionConfirmContext": "Confirmar Frase",
   "actionAnalyze": "Analisar",
   "actionSynonyms": "Buscar Sinônimos",
   "analyzingContext": "Analisando contexto com IA...",

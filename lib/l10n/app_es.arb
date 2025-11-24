@@ -105,11 +105,11 @@
   "alignment": "Alineación",
   "justified": "Justificado",
   "left": "Izquierda",
-  "confirmContext": "Confirmar Contexto",
+  "confirmContext": "Confirmar Oración",
   "saveCard": "Guardar Tarjeta",
   "loadingChapter": "Cargando capítulo...",
   "selectingContext": "Seleccionando contexto",
-  "selectContextInstruction": "Selecciona el texto y pulsa \"Confirmar Contexto\"",
+  "selectContextInstruction": "Selecciona el texto y pulsa \"Confirmar Oración\"",
   "footnoteDevelopment": "Nota al pie: Navegación en desarrollo",
   "noCardsToExport": "No hay tarjetas para exportar",
   "exportingCards": "Exportando tarjetas...",
@@ -151,7 +151,8 @@
     }
   },
   "close": "Cerrar",
-  "originalContext": "CONTEXTO ORIGINAL",
+  "originalContext": "Oración del libro",
+  "contextTranslation": "Traducción de la Oración",
   "mainIdea": "Idea Principal",
   "keyVocabulary": "VOCABULARIO CLAVE",
   "usageExamples": "Ejemplos de Uso",
@@ -193,7 +194,7 @@
       }
     }
   },
-  "createStudyCard": "Crear Tarjeta de Estudio",
+  "createStudyCard": "Nueva Tarjeta",
   "wordAlreadyExists": "Esta palabra ya está en tu colección.",
   "word": "Palabra",
   "exampleOptional": "Ejemplo (Opcional)",
@@ -244,7 +245,7 @@
   "readerToolCapture": "Crear Tarjeta",
   "readerToolAnalyze": "Analizar Texto",
   "readerToolSynonyms": "Ver Sinónimos",
-  "promptSelectWord": "Selecciona la palabra a aprender",
+  "promptSelectWord": "Elige la palabra a estudiar",
   "promptSelectContext": "Selecciona la oración para: {word}",
   "@promptSelectContext": {
     "placeholders": {
@@ -253,9 +254,18 @@
       }
     }
   },
+  "promptSelectContextVocab": "Selecciona el contexto para: {word}",
+  "@promptSelectContextVocab": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "actionConfirmContextVocab": "Confirmar Contexto",
   "promptSelectText": "Selecciona el texto a analizar",
   "actionConfirmWord": "Confirmar Palabra",
-  "actionConfirmContext": "Confirmar Contexto",
+  "actionConfirmContext": "Confirmar Oración",
   "actionAnalyze": "Analizar",
   "actionSynonyms": "Buscar Sinónimos",
   "analyzingContext": "Analizando contexto con IA...",

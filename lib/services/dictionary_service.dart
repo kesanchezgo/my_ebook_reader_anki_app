@@ -978,7 +978,7 @@ Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
             }]
           }]
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 30));
 
       print('--- RESPUESTA DE GEMINI ---');
       print('Status Code: ${response.statusCode}');
@@ -1013,11 +1013,16 @@ Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido con esta estructura:
             }
           }
         }
+      } else if (response.statusCode == 503) {
+        throw Exception('El modelo de IA está sobrecargado. Por favor, intenta de nuevo en unos momentos.');
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('La IA tardó demasiado en responder. Verifica tu conexión.');
     } catch (e) {
       print('Error consultando Gemini para aprendizaje: $e');
+      if (e.toString().contains('sobrecargado')) rethrow;
     }
     return null;
   }
@@ -1099,7 +1104,7 @@ Responde ÚNICAMENTE con el JSON solicitado.
             "responseSchema": jsonSchema
           }
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 30));
 
       print('--- RESPUESTA DE GEMINI (DEFINICIONES) ---');
       print('Status Code: ${response.statusCode}');
@@ -1128,8 +1133,11 @@ Responde ÚNICAMENTE con el JSON solicitado.
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('La IA tardó demasiado en responder. Verifica tu conexión.');
     } catch (e) {
       print('Error consultando Gemini: $e');
+      if (e.toString().contains('sobrecargado')) rethrow;
     }
     return null;
   }
@@ -1214,7 +1222,7 @@ Responde ÚNICAMENTE con el JSON solicitado.
             "responseSchema": jsonSchema
           }
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 30));
 
       print('--- RESPUESTA DE GEMINI (TRADUCCIÓN CONTEXTO) ---');
       print('Status Code: ${response.statusCode}');
@@ -1243,8 +1251,11 @@ Responde ÚNICAMENTE con el JSON solicitado.
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('La IA tardó demasiado en responder. Verifica tu conexión.');
     } catch (e) {
       print('Error consultando Gemini: $e');
+      if (e.toString().contains('sobrecargado')) rethrow;
     }
     return null;
   }
@@ -1337,7 +1348,7 @@ Responde ÚNICAMENTE con el JSON solicitado.
             "responseSchema": jsonSchema
           }
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 30));
 
       print('--- RESPUESTA DE GEMINI (EJEMPLO) ---');
       print('Status Code: ${response.statusCode}');
@@ -1366,8 +1377,11 @@ Responde ÚNICAMENTE con el JSON solicitado.
       } else {
         print('Error Gemini API: ${response.statusCode} - ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('La IA tardó demasiado en responder. Verifica tu conexión.');
     } catch (e) {
       print('Error consultando Gemini: $e');
+      if (e.toString().contains('sobrecargado')) rethrow;
     }
     return null;
   }

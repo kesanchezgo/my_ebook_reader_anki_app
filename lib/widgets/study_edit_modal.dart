@@ -782,7 +782,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                                 Icon(Icons.text_snippet_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Contexto Original',
+                                  l10n.originalContext,
                                   style: textTheme.labelSmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.bold,
@@ -817,7 +817,7 @@ class _StudyEditModalState extends State<StudyEditModal> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        'Traducción del Contexto',
+                                        l10n.contextTranslation,
                                         style: textTheme.labelLarge?.copyWith(
                                           color: colorScheme.primary,
                                           fontWeight: FontWeight.bold,

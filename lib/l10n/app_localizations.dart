@@ -469,7 +469,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmContext.
   ///
   /// In es, this message translates to:
-  /// **'Confirmar Contexto'**
+  /// **'Confirmar Oración'**
   String get confirmContext;
 
   /// No description provided for @saveCard.
@@ -493,7 +493,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectContextInstruction.
   ///
   /// In es, this message translates to:
-  /// **'Selecciona el texto y pulsa \"Confirmar Contexto\"'**
+  /// **'Selecciona el texto y pulsa \"Confirmar Oración\"'**
   String get selectContextInstruction;
 
   /// No description provided for @footnoteDevelopment.
@@ -577,8 +577,14 @@ abstract class AppLocalizations {
   /// No description provided for @originalContext.
   ///
   /// In es, this message translates to:
-  /// **'CONTEXTO ORIGINAL'**
+  /// **'Oración del libro'**
   String get originalContext;
+
+  /// No description provided for @contextTranslation.
+  ///
+  /// In es, this message translates to:
+  /// **'Traducción de la Oración'**
+  String get contextTranslation;
 
   /// No description provided for @mainIdea.
   ///
@@ -739,7 +745,7 @@ abstract class AppLocalizations {
   /// No description provided for @createStudyCard.
   ///
   /// In es, this message translates to:
-  /// **'Crear Tarjeta de Estudio'**
+  /// **'Nueva Tarjeta'**
   String get createStudyCard;
 
   /// No description provided for @wordAlreadyExists.
@@ -985,7 +991,7 @@ abstract class AppLocalizations {
   /// No description provided for @promptSelectWord.
   ///
   /// In es, this message translates to:
-  /// **'Selecciona la palabra a aprender'**
+  /// **'Elige la palabra a estudiar'**
   String get promptSelectWord;
 
   /// No description provided for @promptSelectContext.
@@ -993,6 +999,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Selecciona la oración para: {word}'**
   String promptSelectContext(String word);
+
+  /// No description provided for @promptSelectContextVocab.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona el contexto para: {word}'**
+  String promptSelectContextVocab(String word);
+
+  /// No description provided for @actionConfirmContextVocab.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar Contexto'**
+  String get actionConfirmContextVocab;
 
   /// No description provided for @promptSelectText.
   ///
@@ -1009,7 +1027,7 @@ abstract class AppLocalizations {
   /// No description provided for @actionConfirmContext.
   ///
   /// In es, this message translates to:
-  /// **'Confirmar Contexto'**
+  /// **'Confirmar Oración'**
   String get actionConfirmContext;
 
   /// No description provided for @actionAnalyze.
