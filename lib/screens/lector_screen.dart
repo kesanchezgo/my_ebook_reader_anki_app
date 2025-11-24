@@ -923,7 +923,7 @@ class _LectorScreenState extends State<LectorScreen> with WidgetsBindingObserver
                                  type: AiResultType.synonyms,
                                  data: result,
                                  source: result['source'] ?? 'IA',
-                                 originalText: word,
+                                 originalText: contextSentence,
                                ),
                              );
                              if (mounted) setState(() => _showControls = true);
