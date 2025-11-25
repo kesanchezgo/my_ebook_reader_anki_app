@@ -9,21 +9,32 @@ class FileService {
     return await getApplicationDocumentsDirectory();
   }
 
-  /// Permite al usuario seleccionar un archivo EPUB
-  Future<FilePickerResult?> pickBookFile() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['epub'],
-        allowMultiple: false,
-      );
+    /// Permite al usuario seleccionar un archivo EPUB de forma segura
+    Future<FilePickerResult?> pickBookFile() async {
+      try {
+        // Fix: 'withData: false' es vital para evitar crasheos de memoria al importar
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['epub'],
+          allowMultiple: false,
+          withData: false, // <--- ESTO EVITA QUE SE CARGUE EL ARCHIVO A LA RAM
+        );
 
-      return result;
-    } catch (e) {
-      print('Error al seleccionar archivo: $e');
-      return null;
+        if (result != null && result.files.isNotEmpty) {
+          // Fix adicional: Verificar explícitamente si el path es nulo (bug Android)
+          if (result.files.first.path == null) {
+            print('Error: El sistema devolvió un path nulo.');
+            return null;
+          }
+        }
+
+        return result;
+      } catch (e) {
+        print('Error al seleccionar archivo: $e');
+        return null;
+      }
     }
-  }
+
 
   /// Copia un archivo al directorio de la aplicación
   Future<String?> copyFileToAppDirectory(String sourcePath, String fileName) async {
