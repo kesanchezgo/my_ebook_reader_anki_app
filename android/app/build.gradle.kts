@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "com.example.my_ebook_reader_anki_app"
     compileSdk = flutter.compileSdkVersion
-    //compileSdk = 33
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -21,21 +20,42 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // ApplicationId por defecto (se sobrescribe por flavors)
         applicationId = "com.example.my_ebook_reader_anki_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion  // Requerido para file_picker y syncfusion
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    // Añadimos dimension y productFlavors
+    flavorDimensions += "app"
+
+    productFlavors {
+        create("prod") {
+            dimension = "app"
+            // Package name de producción (lexio)
+            applicationId = "com.kivara.lexio"
+            // Puedes añadir resources específicos o suffix de versión
+        }
+        create("dev") {
+            dimension = "app"
+            // Package name de desarrollo (no sobrescribirá prod)
+            applicationId = "com.kivara.lexio.dev"
+            versionNameSuffix = "-dev"
+            // opcional: applicationIdSuffix = ".dev" // ya estamos definiendo applicationId distinto
+        }
+    }
+
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        getByName("debug") {
+            // opcional: si quieres un sufijo para debug además del flavor
+            // applicationIdSuffix = ".debug"
+        }
+        getByName("release") {
+            // Por ahora usa debug signing (cámbialo cuando firmes)
             signingConfig = signingConfigs.getByName("debug")
+            // minifyEnabled true // si activas R8/ProGuard, añade reglas
         }
     }
 }
